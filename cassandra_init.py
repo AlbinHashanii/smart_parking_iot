@@ -1,21 +1,14 @@
-from cassandra.cluster import Cluster
-from cassandra.query import SimpleStatement
-
-# Connect to Cassandra
-cluster = Cluster(['localhost'])
-session = cluster.connect('parking_keyspace')
-
-# Initialize metadata for 50 slots (5x10 grid)
-def init_metadata():
+with open("metadata_inserts.cql", "w") as f:
+    f.write("BEGIN BATCH\n")
     for i in range(50):
-        slot_id = f'S{i+1}'
-        sensor_id = slot_id  # 1:1 mapping
-        x = (i % 10) * 100  # x-coordinate (0, 100, 200, ..., 900)
-        y = (i // 10) * 100  # y-coordinate (0, 100, 200, 300, 400)
-        query = "INSERT INTO metadata (sensor_id, slot_id, x, y) VALUES (%s, %s, %s, %s)"
-        session.execute(query, (sensor_id, slot_id, x, y))
-    print("Metadata initialized")
-
-if __name__ == '__main__':
-    init_metadata()
-    cluster.shutdown()
+        slot = i + 1
+        sensor_id = f"S{slot}"
+        x = (i % 10) * 100
+        y = (i // 10) * 100
+        f.write(
+            f"INSERT INTO parking_keyspace.metadata "
+            f"(sensor_id, slot_id, x, y) VALUES "
+            f"('{sensor_id}', '{sensor_id}', {x}, {y});\n"
+        )
+    f.write("APPLY BATCH;\n")
+print("Wrote metadata_inserts.cql")
