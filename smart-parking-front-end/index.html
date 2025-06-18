@@ -7,176 +7,213 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 20px;
-            background-color: #f4f4f4;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #eef2f7; /* Light background */
             color: #333;
-        }
-        h1 {
-            text-align: center;
-            color: #0056b3;
-            margin-bottom: 30px;
-        }
-        .dashboard-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 30px;
-            justify-content: center;
-            margin-top: 20px;
-        }
-        .parking-lot-card {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            border-radius: 12px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
-            padding: 25px;
-            width: 400px; /* Wider to accommodate map layout */
-            min-height: 350px; /* Ensure sufficient height */
-            text-align: center;
             display: flex;
             flex-direction: column;
             align-items: center;
+            min-height: 100vh;
         }
-        .parking-lot-card h2 {
-            margin-top: 0;
-            color: #0056b3;
-            font-size: 1.8em;
-            margin-bottom: 20px;
+        h1 {
+            text-align: center;
+            color: #2c3e50; /* Darker blue/grey */
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            font-weight: 600;
         }
-
-        /* --- Map-like Grid (more flexible than fixed grid) --- */
-        .parking-map-grid {
-            display: flex; /* Use flexbox for more organic layout */
-            flex-wrap: wrap; /* Allow items to wrap */
-            justify-content: center; /* Center items in the lot */
-            gap: 10px; /* Spacing between spots */
-            padding: 15px;
-            background-color: #e9e9e9; /* Light grey background for the "lot" area */
-            border-radius: 8px;
-            width: 100%; /* Fill card width */
-            box-sizing: border-box;
-            position: relative; /* For potential future lane lines */
-        }
-        /* Optional: Add some subtle background lines for lanes if desired */
-        /*
-        .parking-map-grid::before {
-            content: '';
-            position: absolute;
-            top: 25%; bottom: 25%;
-            left: 50%; 
-            width: 2px;
-            background-color: rgba(0,0,0,0.1);
-            transform: translateX(-50%);
-            z-index: 0;
-        }
-        */
-
-        .parking-spot {
-            width: 70px; /* Wider to fit car icon + text */
-            height: 90px; /* Taller to fit car icon + text */
-            display: flex;
-            flex-direction: column; /* Stack icon and text */
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #ccc;
-            border-radius: 6px; /* Slightly more rounded */
-            font-size: 0.85em;
-            font-weight: bold;
-            color: #555;
-            transition: background-color 0.3s ease, border-color 0.3s ease, transform 0.2s ease;
-            cursor: pointer;
-            position: relative; /* For tooltips or overlays */
-            box-sizing: border-box; /* Include padding/border in width/height */
-        }
-
-        .parking-spot:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
-        }
-
-        /* Icons styling */
-        .parking-spot i {
-            font-size: 2.2em; /* Larger icons */
-            margin-bottom: 5px; /* Space between icon and text */
-        }
-
-        /* Status-specific styles */
-        .parking-spot.available {
-            background-color: #e6ffe6; /* Very light green */
-            border-color: #28a745; /* Darker green border */
-            color: #28a745;
-        }
-
-        .parking-spot.occupied {
-            background-color: #ffe6e6; /* Very light red */
-            border-color: #dc3545; /* Darker red border */
-            color: #dc3545;
-        }
-        /* Optional: Adjust label color for contrast */
-        .parking-spot.occupied .spot-label {
-             /* color: #666; */
-        }
-
-        .parking-spot.malfunction {
-            background-color: #fff8e6; /* Very light orange/yellow */
-            border-color: #ffc107; /* Darker orange border */
-            color: #ffc107;
-        }
-
-        /* Spot label (S1, S2 etc.) */
-        .spot-label {
-            position: absolute;
-            bottom: 5px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 0.75em;
-            font-weight: bold;
-            color: #444; /* Default label color */
-        }
-
-        .parking-spot.occupied .spot-label,
-        .parking-spot.malfunction .spot-label {
-            color: #666; /* Slightly muted label for occupied/malfunction */
-        }
-
-
         #status-message {
             text-align: center;
-            margin-top: 30px;
+            margin-top: 15px;
+            margin-bottom: 25px;
             font-size: 0.9em;
             color: #666;
+            background-color: #fff;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
         }
 
         .legend-container {
             display: flex;
             justify-content: center;
-            gap: 25px;
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #f0f0f0;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            gap: 30px;
+            margin-bottom: 40px;
+            padding: 18px 30px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
         .legend-item {
             display: flex;
             align-items: center;
-            gap: 8px;
-            font-size: 0.9em;
-            color: #555;
+            gap: 10px;
+            font-size: 1.05em;
+            color: #444;
+            font-weight: 500;
         }
         .legend-color-box {
-            width: 20px;
-            height: 20px;
-            border-radius: 4px;
-            border: 1px solid #ccc;
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            border: 1px solid #ddd;
+            display: inline-block;
+            vertical-align: middle;
         }
         .legend-item i {
-            font-size: 1.2em;
-            margin-right: 5px;
+            font-size: 1.4em;
+            color: inherit; /* Inherit color from parent legend-item */
         }
-        .legend-item.available .legend-color-box { background-color: #d4edda; border-color: #28a745; }
+        .legend-item.available .legend-color-box { background-color: #d4edda; border-color: #28a745; } /* Bootstrap success light */
+        .legend-item.occupied { color: #dc3545; } /* Bootstrap danger */
         .legend-item.occupied .legend-color-box { background-color: #f8d7da; border-color: #dc3545; }
+        .legend-item.malfunction { color: #ffc107; } /* Bootstrap warning */
         .legend-item.malfunction .legend-color-box { background-color: #fff3cd; border-color: #ffc107; }
+
+
+        .dashboard-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 40px; /* Increased gap between lot cards */
+            justify-content: center;
+            width: 100%;
+            max-width: 1400px; /* Limit overall width */
+        }
+        .parking-lot-card {
+            background-color: #ffffff;
+            border: 1px solid #e0e0e0;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
+            padding: 30px;
+            width: calc(33% - 40px); /* Roughly 3 cards per row with gap */
+            min-width: 380px; /* Minimum width to prevent crushing */
+            box-sizing: border-box; /* Include padding and border in the width */
+            text-align: center;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: transform 0.2s ease-in-out;
+        }
+        .parking-lot-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 25px rgba(0,0,0,0.15);
+        }
+        .parking-lot-card h2 {
+            margin-top: 0;
+            color: #2980b9; /* A nice blue */
+            font-size: 2em;
+            margin-bottom: 25px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #ecf0f1; /* Subtle separator */
+            width: 100%;
+        }
+
+        /* --- Map-like Grid Layout for Parking Spots --- */
+        .parking-map-grid {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr); /* 5 columns, flexible width */
+            gap: 10px; /* Spacing between spots */
+            padding: 15px;
+            background-color: #f8fbfd; /* Very light blue background for the "lot" area */
+            border-radius: 10px;
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px dashed #ced4da; /* A subtle dashed border for the lot area */
+        }
+
+        .parking-spot {
+            height: 85px; /* Fixed height for consistent look */
+            display: flex;
+            flex-direction: column; /* Stack icon and label */
+            align-items: center;
+            justify-content: center;
+            border: 2px solid #ccc;
+            border-radius: 8px; /* More rounded */
+            font-size: 0.85em;
+            font-weight: bold;
+            transition: background-color 0.3s ease, border-color 0.3s ease;
+            position: relative; /* For precise label positioning */
+            color: #555; /* Default text color */
+        }
+
+        /* Icons styling */
+        .parking-spot .spot-icon {
+            font-size: 2.5em; /* Larger icons */
+            margin-bottom: 2px; /* Small space between icon and text */
+            line-height: 1; /* Prevent extra space around icon */
+        }
+
+        /* Spot label (S1, S2 etc.) */
+        .spot-label {
+            font-size: 0.8em; /* Slightly smaller label */
+            font-weight: 600;
+            color: #444; /* Default label color */
+        }
+
+        /* Status-specific styles */
+        .parking-spot.available {
+            background-color: #e6ffe6; /* Lightest green */
+            border-color: #28a745; /* Green border */
+            color: #28a745; /* Green for label if no icon */
+        }
+        .parking-spot.available .spot-icon {
+            color: #28a745; /* Ensure icon is green if present for consistency */
+        }
+
+        .parking-spot.occupied {
+            background-color: #ffe6e6; /* Lightest red */
+            border-color: #dc3545; /* Red border */
+            color: #dc3545; /* Red for icon/label */
+        }
+
+        .parking-spot.malfunction {
+            background-color: #fff8e6; /* Lightest yellow */
+            border-color: #ffc107; /* Yellow border */
+            color: #ffc107; /* Yellow for icon/label */
+        }
+
+        /* Media Queries for Responsiveness */
+        @media (max-width: 1200px) {
+            .parking-lot-card {
+                width: calc(50% - 30px); /* 2 cards per row on medium screens */
+            }
+        }
+        @media (max-width: 768px) {
+            .parking-lot-card {
+                width: calc(100% - 20px); /* 1 card per row on small screens */
+                padding: 20px;
+            }
+            .parking-map-grid {
+                grid-template-columns: repeat(4, 1fr); /* 4 columns on smaller screens to make spots bigger */
+                gap: 8px;
+            }
+            .parking-lot-card h2 {
+                font-size: 1.8em;
+            }
+        }
+        @media (max-width: 480px) {
+            .parking-map-grid {
+                grid-template-columns: repeat(3, 1fr); /* 3 columns on very small screens */
+            }
+            .parking-spot {
+                height: 70px;
+            }
+            .parking-spot .spot-icon {
+                font-size: 2em;
+            }
+            .spot-label {
+                font-size: 0.7em;
+            }
+            .legend-item {
+                font-size: 0.9em;
+            }
+            .legend-container {
+                flex-direction: column;
+                gap: 10px;
+            }
+        }
 
     </style>
 </head>
