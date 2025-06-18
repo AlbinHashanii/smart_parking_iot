@@ -33,15 +33,21 @@ services:
       - smart_parking_net
 
   spark-master:
-    image: bitnami/spark:latest # Consider a specific version like 'bitnami/spark:3.5.0'
+    image: bitnami/spark:3.5.0
     container_name: spark-master
-    ports:
-      - "7077:7077"
-      - "8081:8080"
+    hostname: spark-master
     environment:
-      SPARK_MODE: master
-    volumes:
-      - spark_master_data:/bitnami/spark
+      - SPARK_MODE=master
+      - SPARK_RPC_AUTHENTICATION_ENABLED=no
+      - SPARK_RPC_ENCRYPTION_ENABLED=no
+      - SPARK_LOCAL_STORAGE_ENCRYPTION_ENABLED=no
+      - SPARK_SSL_ENABLED=no
+      - SPARK_MASTER_PORT=7077
+      - SPARK_MASTER_WEBUI_PORT=8080
+      - SPARK_MASTER_HOST=0.0.0.0 # Ensures it binds to all interfaces for host access
+    ports:
+      - "7077:7077" # Expose client port to host
+      - "8081:8080" # Expose Web UI port to host
     networks:
       - smart_parking_net
 

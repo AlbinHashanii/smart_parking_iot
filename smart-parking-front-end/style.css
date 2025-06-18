@@ -1,0 +1,81 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+    background-color: #f4f4f4;
+    color: #333;
+}
+
+h1 {
+    text-align: center;
+    color: #0056b3;
+}
+
+#parking-lots-container {
+    display: flex;
+    flex-wrap: wrap; /* Allows lots to wrap to next line if space is limited */
+    gap: 20px; /* Space between parking lots */
+    justify-content: center;
+}
+
+.parking-lot {
+    background-color: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 20px;
+    width: 350px; /* Fixed width for each lot */
+    min-height: 400px; /* Minimum height */
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.parking-lot h2 {
+    margin-top: 0;
+    color: #007bff;
+    text-align: center;
+    width: 100%;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.parking-spots-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr); /* 5 columns */
+    gap: 5px; /* Space between spots */
+    width: 100%;
+    margin-top: 15px;
+}
+
+.parking-spot {
+    width: 50px; /* Size of each square spot */
+    height: 50px;
+    border: 1px solid #ccc;
+    background-color: #f0f0f0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 0.8em;
+    font-weight: bold;
+    border-radius: 4px;
+    cursor: default; /* No pointer cursor */
+}
+
+.parking-spot.occupied {
+    background-color: #dc3545; /* Red */
+    color: white;
+    border-color: #c82333;
+}
+
+.parking-spot.available {
+    background-color: #28a745; /* Green */
+    color: white;
+    border-color: #218838;
+}
+
+#status-message {
+    text-align: center;
+    margin-top: 20px;
+    font-style: italic;
+    color: #666;
+}
