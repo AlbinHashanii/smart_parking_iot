@@ -1,81 +1,357 @@
 body {
-    font-family: Arial, sans-serif;
-    margin: 20px;
-    background-color: #f4f4f4;
+    font-family: 'Poppins', sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f0f2f5;
     color: #333;
-}
-
-h1 {
-    text-align: center;
-    color: #0056b3;
-}
-
-#parking-lots-container {
-    display: flex;
-    flex-wrap: wrap; /* Allows lots to wrap to next line if space is limited */
-    gap: 20px; /* Space between parking lots */
-    justify-content: center;
-}
-
-.parking-lot {
-    background-color: #fff;
-    border: 1px solid #ddd;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    padding: 20px;
-    width: 350px; /* Fixed width for each lot */
-    min-height: 400px; /* Minimum height */
     display: flex;
     flex-direction: column;
     align-items: center;
+    min-height: 100vh;
 }
 
-.parking-lot h2 {
-    margin-top: 0;
-    color: #007bff;
+.dashboard-header {
+    width: 100%;
     text-align: center;
-    width: 100%;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #eee;
+    padding: 30px 20px;
+    background-color: #ffffff;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    margin-bottom: 25px;
 }
 
-.parking-spots-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr); /* 5 columns */
-    gap: 5px; /* Space between spots */
-    width: 100%;
-    margin-top: 15px;
-}
-
-.parking-spot {
-    width: 50px; /* Size of each square spot */
-    height: 50px;
-    border: 1px solid #ccc;
-    background-color: #f0f0f0;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    font-size: 0.8em;
-    font-weight: bold;
-    border-radius: 4px;
-    cursor: default; /* No pointer cursor */
-}
-
-.parking-spot.occupied {
-    background-color: #dc3545; /* Red */
-    color: white;
-    border-color: #c82333;
-}
-
-.parking-spot.available {
-    background-color: #28a745; /* Green */
-    color: white;
-    border-color: #218838;
+h1 {
+    color: #2c3e50;
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 2.8em;
+    font-weight: 700;
 }
 
 #status-message {
-    text-align: center;
-    margin-top: 20px;
-    font-style: italic;
+    font-size: 0.95em;
     color: #666;
+    background-color: #e9ecef;
+    padding: 8px 15px;
+    border-radius: 6px;
+    display: inline-block;
+    margin-top: 10px;
+}
+
+.legend-container {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    margin-bottom: 40px;
+    padding: 18px 30px;
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+.legend-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 1.05em;
+    color: #444;
+    font-weight: 500;
+}
+.legend-color-box {
+    width: 24px;
+    height: 24px;
+    border-radius: 6px;
+    border: 1px solid #ddd;
+    display: inline-block;
+    vertical-align: middle;
+}
+.legend-item i {
+    font-size: 1.4em;
+    color: inherit;
+}
+.legend-item.available .legend-color-box { background-color: #d4edda; border-color: #28a745; }
+.legend-item.occupied { color: #dc3545; }
+.legend-item.occupied .legend-color-box { background-color: #f8d7da; border-color: #dc3545; }
+.legend-item.malfunction { color: #ffc107; }
+.legend-item.malfunction .legend-color-box { background-color: #fff3cd; border-color: #ffc107; }
+
+
+.main-content-wrapper {
+    display: flex;
+    flex-direction: column; /* Stack stats above lots */
+    align-items: center; /* Center content horizontally */
+    gap: 30px; /* Gap between stats panel and dashboard container */
+    width: 100%;
+    max-width: 100vw;
+    padding: 0 20px;
+    box-sizing: border-box;
+    overflow-x: auto; /* Allows horizontal scrolling if total content overflows */
+}
+
+/* Dashboard container specifically for parking lots (always side-by-side) */
+.dashboard-container {
+    display: flex;
+    flex-wrap: nowrap; /* Force parking lot cards to stay on one line */
+    gap: 30px;
+    justify-content: flex-start; /* Align lots to the start within their row */
+    flex-shrink: 0; /* Prevent dashboard container from shrinking */
+    padding-bottom: 10px; /* Add some padding if scrollbar appears */
+    width: fit-content; /* Allow the container to be as wide as its content */
+    margin: 0 auto; /* Center the dashboard container itself */
+}
+
+.parking-lot-card {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 15px;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+    padding: 30px;
+    width: 400px; /* Fixed width for each card to ensure consistent size */
+    flex-shrink: 0; /* Important: Prevent individual cards from shrinking */
+    box-sizing: border-box;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.parking-lot-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 10px 20px rgba(0,0,0,0.12);
+}
+.parking-lot-card h2 {
+    margin-top: 0;
+    color: #2980b9;
+    font-size: 2em;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eef2f7;
+    width: 100%;
+    font-weight: 600;
+}
+
+/* --- Map-like Grid Layout for Parking Spots --- */
+.parking-map-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 10px;
+    padding: 15px;
+    background-color: #fcfdff;
+    border-radius: 10px;
+    width: 100%;
+    box-sizing: border-box;
+    border: 1px dashed #d1d9e0;
+}
+
+.parking-spot {
+    height: 85px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #ccc;
+    border-radius: 8px;
+    font-size: 0.85em;
+    font-weight: bold;
+    transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+    position: relative;
+    color: #555;
+    cursor: default;
+}
+
+.parking-spot .spot-icon {
+    font-size: 2.5em;
+    margin-bottom: 2px;
+    line-height: 1;
+}
+
+.spot-label {
+    font-size: 0.8em;
+    font-weight: 600;
+    color: #444;
+}
+
+/* Status-specific styles */
+.parking-spot.available {
+    background-color: #eaf7ed;
+    border-color: #4CAF50;
+    color: #28a745;
+}
+.parking-spot.available .spot-icon {
+    color: #4CAF50;
+}
+
+.parking-spot.occupied {
+    background-color: #fde8ea;
+    border-color: #f44336;
+    color: #dc3545;
+}
+
+.parking-spot.malfunction {
+    background-color: #fff9e6;
+    border-color: #ff9800;
+    color: #ffc107;
+}
+
+/* --- Statistics Panel Styles --- */
+.stats-panel {
+    background-color: #ffffff;
+    border: 1px solid #e0e0e0;
+    border-radius: 15px;
+    box-shadow: 0 6px 15px rgba(0,0,0,0.08);
+    padding: 30px;
+    width: 100%; /* Make stats panel take full width */
+    max-width: 1500px; /* Limit max width for a cleaner look */
+    box-sizing: border-box;
+    display: flex;
+    flex-direction: column; /* Keep content stacked within the panel */
+    align-items: center;
+    flex-shrink: 0; /* Prevent it from shrinking */
+}
+
+.stats-panel h2 {
+    margin-top: 0;
+    color: #2980b9;
+    font-size: 2em;
+    margin-bottom: 25px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #eef2f7;
+    width: 100%;
+    text-align: center;
+    font-weight: 600;
+}
+
+.stats-grid {
+    display: grid;
+    /* Adjusted to create more columns for horizontal layout */
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 15px;
+    width: 100%;
+}
+
+.stat-card {
+    background-color: #fdfdfd;
+    border: 1px solid #e9eef2;
+    border-radius: 10px;
+    padding: 15px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+    transition: transform 0.2s ease-in-out;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.stat-icon-wrapper {
+    font-size: 2.2em;
+    margin-bottom: 8px;
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+/* Icon background colors */
+.stat-icon-wrapper.total { background-color: #6c757d; }
+.stat-icon-wrapper.available { background-color: #28a745; }
+.stat-icon-wrapper.occupied { background-color: #dc3545; }
+.stat-icon-wrapper.malfunction { background-color: #ffc107; }
+.stat-icon-wrapper.rate { background-color: #007bff; }
+.stat-icon-wrapper.duration { background-color: #6f42c1; }
+.stat-icon-wrapper.temperature { background-color: #17a2b8; }
+
+
+.stat-label {
+    font-weight: 500;
+    color: #555;
+    font-size: 0.95em;
+    margin-bottom: 5px;
+}
+
+.stat-value {
+    font-weight: 700;
+    color: #2c3e50;
+    font-size: 1.8em;
+}
+
+.stat-card.available-card .stat-value { color: #28a745; }
+.stat-card.occupied-card .stat-value { color: #dc3545; }
+.stat-card.malfunction-card .stat-value { color: #ffc107; }
+
+
+/* Media Queries for Responsiveness */
+@media (max-width: 1200px) {
+    /* Main wrapper already changes to column direction */
+    .dashboard-container {
+        /* No specific width adjustments for parking-lot-card here as they are fixed */
+        gap: 20px; /* Adjust gap for smaller screens */
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* More compact on smaller screens */
+    }
+}
+@media (max-width: 768px) {
+    h1 {
+        font-size: 2.2em;
+    }
+    .parking-lot-card h2 {
+        font-size: 1.8em;
+    }
+    .parking-map-grid {
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+    }
+    .stats-panel h2 {
+        font-size: 1.8em;
+    }
+    .stats-grid {
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 10px;
+    }
+    .stat-value {
+        font-size: 1.5em;
+    }
+    .stat-label {
+        font-size: 0.85em;
+    }
+}
+@media (max-width: 480px) {
+    h1 {
+        font-size: 1.8em;
+    }
+    #status-message {
+        font-size: 0.85em;
+        padding: 6px 10px;
+    }
+    .parking-map-grid {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .parking-spot {
+        height: 70px;
+    }
+    .parking-spot .spot-icon {
+        font-size: 2em;
+    }
+    .spot-label {
+        font-size: 0.7em;
+    }
+    .legend-item {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .legend-container {
+        flex-direction: column; /* Stack legend items vertically */
+        gap: 10px;
+    }
+    .stats-grid {
+        grid-template-columns: 1fr; /* Stack stats vertically on very small screens */
+    }
 }

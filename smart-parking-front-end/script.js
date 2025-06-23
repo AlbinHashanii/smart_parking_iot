@@ -24,22 +24,17 @@ async function fetchParkingData() {
 
 // Function to render or update the parking lot visualization
 function renderParkingLots(parkingData) {
-    // Group incoming data by parking lot name for easier access
     const groupedData = parkingData.reduce((acc, spot) => {
         if (!acc[spot.parkingLotName]) {
             acc[spot.parkingLotName] = {};
         }
-        // Ensure slotId is a string if it comes as number, for consistent keying
-        acc[spot.parkingLotName][spot.slotId] = spot; // Store the whole spot object
+        acc[spot.parkingLotName][spot.slotId] = spot;
         return acc;
     }, {});
 
-    // Define the parking lots we expect to visualize
-    // IMPORTANT: Make sure these names exactly match what your Java backend sends (e.g., "Parking Lot A")
     const parkingLotNames = ['Parking Lot A', 'Parking Lot B', 'Parking Lot C'];
 
     parkingLotNames.forEach(lotName => {
-        // Extract "A", "B", "C" from "Parking Lot A" to match HTML IDs (parking-lot-A)
         const lotLetter = lotName.split(' ').pop();
         const lotElement = document.getElementById(`parking-lot-${lotLetter}`);
 
@@ -49,71 +44,114 @@ function renderParkingLots(parkingData) {
         }
 
         const spotsGrid = lotElement.querySelector('.parking-map-grid');
-        // Clear existing spots only if needed, or update existing ones for performance
-        // For simplicity and robustness on initial render/full update, clearing is fine.
         spotsGrid.innerHTML = '';
 
-        const currentLotData = groupedData[lotName] || {}; // Get data for this specific lot
+        const currentLotData = groupedData[lotName] || {};
 
-        // Create/update individual parking spots
         for (let i = 1; i <= TOTAL_SLOTS_PER_LOT; i++) {
             const spotElement = document.createElement('div');
             spotElement.classList.add('parking-spot');
 
-            const spotInfo = currentLotData[i]; // Get the whole spot object for this ID
-            const status = spotInfo ? spotInfo.status.toLowerCase() : 'available'; // Default to available if no data
+            const spotInfo = currentLotData[i];
+            // Default to 'available' if no data or status is unclear
+            const status = spotInfo && spotInfo.status ? spotInfo.status.toLowerCase() : 'available';
 
-            // Icon element
             const iconElement = document.createElement('i');
-            iconElement.classList.add('spot-icon');
-            iconElement.classList.add('fas'); // Font Awesome base class
+            iconElement.classList.add('spot-icon', 'fas');
 
-            // Label for the slot ID
             const labelElement = document.createElement('span');
             labelElement.classList.add('spot-label');
-            labelElement.textContent = `S${i}`;
+            labelElement.textContent = `${i}`;
 
-            // Apply status-specific classes and icons
-            spotElement.classList.remove('available', 'occupied', 'malfunction'); // Clear previous
-            iconElement.className = 'spot-icon fas'; // Reset icon classes
+            spotElement.classList.remove('available', 'occupied', 'malfunction');
+            iconElement.className = 'spot-icon fas';
 
             switch (status) {
                 case 'occupied':
                     spotElement.classList.add('occupied');
-                    iconElement.classList.add('fa-car'); // Car icon
-                    spotElement.appendChild(iconElement); // Add icon
+                    iconElement.classList.add('fa-car');
+                    spotElement.appendChild(iconElement);
                     break;
                 case 'malfunction':
                     spotElement.classList.add('malfunction');
-                    iconElement.classList.add('fa-tools'); // Tools icon
-                    spotElement.appendChild(iconElement); // Add icon
+                    iconElement.classList.add('fa-tools');
+                    spotElement.appendChild(iconElement);
                     break;
                 case 'available':
-                case 'free': // Treat "free" as "available"
-                default: // Fallback for unexpected status
+                case 'free':
+                default:
                     spotElement.classList.add('available');
-                    // No specific icon for available spots by default, but you could add one if desired.
-                    // If you want a circle/dot for available, you'd add:
-                    // iconElement.classList.add('fa-circle');
-                    // spotElement.appendChild(iconElement);
                     break;
             }
 
-            // Always append the label
             spotElement.appendChild(labelElement);
             spotsGrid.appendChild(spotElement);
         }
     });
 }
 
+// Function to update overall statistics
+function updateOverallStatistics(parkingData) {
+    let totalSpots = TOTAL_SLOTS_PER_LOT * 3; // Assuming 3 lots
+    let availableSpots = 0;
+    let occupiedSpots = 0;
+    let malfunctionSpots = 0;
+    let totalOccupancyDuration = 0;
+    let occupiedCountForDuration = 0;
+    let totalTemperature = 0;
+    let temperatureCount = 0;
+
+    parkingData.forEach(spot => {
+        // Ensure status exists and convert to lower case safely
+        const status = spot.status ? String(spot.status).toLowerCase() : '';
+
+        switch (status) {
+            case 'available':
+            case 'free':
+                availableSpots++;
+                break;
+            case 'occupied':
+                occupiedSpots++;
+                // **** CHANGED: Now using spot.duration ****
+                if (spot.duration !== undefined && spot.duration !== null && !isNaN(Number(spot.duration))) {
+                    totalOccupancyDuration += Number(spot.duration);
+                    occupiedCountForDuration++;
+                }
+                break;
+            case 'malfunction':
+                malfunctionSpots++;
+                break;
+        }
+
+        // **** CHANGED: Now using spot.temperature ****
+        if (spot.temperature !== undefined && spot.temperature !== null && !isNaN(Number(spot.temperature))) {
+            totalTemperature += Number(spot.temperature);
+            temperatureCount++;
+        }
+    });
+
+    const occupancyRate = totalSpots > 0 ? ((occupiedSpots / totalSpots) * 100).toFixed(1) : 0;
+    const avgDuration = occupiedCountForDuration > 0 ? (totalOccupancyDuration / occupiedCountForDuration).toFixed(0) : 0;
+    const avgTemperature = temperatureCount > 0 ? (totalTemperature / temperatureCount).toFixed(1) : 0;
+
+    document.getElementById('total-spots').textContent = totalSpots;
+    document.getElementById('available-spots').textContent = availableSpots;
+    document.getElementById('occupied-spots').textContent = occupiedSpots;
+    document.getElementById('malfunction-spots').textContent = malfunctionSpots;
+    document.getElementById('occupancy-rate').textContent = `${occupancyRate}%`;
+    document.getElementById('avg-duration').textContent = `${avgDuration} min`;
+    document.getElementById('avg-temperature').textContent = `${avgTemperature} °C`;
+}
+
 // Main function to initialize the dashboard and set up periodic updates
 async function initDashboard() {
     const data = await fetchParkingData();
     renderParkingLots(data);
+    updateOverallStatistics(data);
 }
 
 // Ensure the DOM is fully loaded before running JavaScript
 document.addEventListener('DOMContentLoaded', () => {
-    initDashboard(); // Perform initial data fetch and render
-    setInterval(initDashboard, UPDATE_INTERVAL_MS); // Set up periodic updates
+    initDashboard();
+    setInterval(initDashboard, UPDATE_INTERVAL_MS);
 });

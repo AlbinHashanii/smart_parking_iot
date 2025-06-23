@@ -5,221 +5,14 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Smart Parking Map Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <style>
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background-color: #eef2f7; /* Light background */
-            color: #333;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            min-height: 100vh;
-        }
-        h1 {
-            text-align: center;
-            color: #2c3e50; /* Darker blue/grey */
-            margin-bottom: 30px;
-            font-size: 2.5em;
-            font-weight: 600;
-        }
-        #status-message {
-            text-align: center;
-            margin-top: 15px;
-            margin-bottom: 25px;
-            font-size: 0.9em;
-            color: #666;
-            background-color: #fff;
-            padding: 10px 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
-        }
-
-        .legend-container {
-            display: flex;
-            justify-content: center;
-            gap: 30px;
-            margin-bottom: 40px;
-            padding: 18px 30px;
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
-        }
-        .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            font-size: 1.05em;
-            color: #444;
-            font-weight: 500;
-        }
-        .legend-color-box {
-            width: 24px;
-            height: 24px;
-            border-radius: 6px;
-            border: 1px solid #ddd;
-            display: inline-block;
-            vertical-align: middle;
-        }
-        .legend-item i {
-            font-size: 1.4em;
-            color: inherit; /* Inherit color from parent legend-item */
-        }
-        .legend-item.available .legend-color-box { background-color: #d4edda; border-color: #28a745; } /* Bootstrap success light */
-        .legend-item.occupied { color: #dc3545; } /* Bootstrap danger */
-        .legend-item.occupied .legend-color-box { background-color: #f8d7da; border-color: #dc3545; }
-        .legend-item.malfunction { color: #ffc107; } /* Bootstrap warning */
-        .legend-item.malfunction .legend-color-box { background-color: #fff3cd; border-color: #ffc107; }
-
-
-        .dashboard-container {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 40px; /* Increased gap between lot cards */
-            justify-content: center;
-            width: 100%;
-            max-width: 1400px; /* Limit overall width */
-        }
-        .parking-lot-card {
-            background-color: #ffffff;
-            border: 1px solid #e0e0e0;
-            border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-            padding: 30px;
-            width: calc(33% - 40px); /* Roughly 3 cards per row with gap */
-            min-width: 380px; /* Minimum width to prevent crushing */
-            box-sizing: border-box; /* Include padding and border in the width */
-            text-align: center;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: transform 0.2s ease-in-out;
-        }
-        .parking-lot-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 12px 25px rgba(0,0,0,0.15);
-        }
-        .parking-lot-card h2 {
-            margin-top: 0;
-            color: #2980b9; /* A nice blue */
-            font-size: 2em;
-            margin-bottom: 25px;
-            padding-bottom: 10px;
-            border-bottom: 2px solid #ecf0f1; /* Subtle separator */
-            width: 100%;
-        }
-
-        /* --- Map-like Grid Layout for Parking Spots --- */
-        .parking-map-grid {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr); /* 5 columns, flexible width */
-            gap: 10px; /* Spacing between spots */
-            padding: 15px;
-            background-color: #f8fbfd; /* Very light blue background for the "lot" area */
-            border-radius: 10px;
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px dashed #ced4da; /* A subtle dashed border for the lot area */
-        }
-
-        .parking-spot {
-            height: 85px; /* Fixed height for consistent look */
-            display: flex;
-            flex-direction: column; /* Stack icon and label */
-            align-items: center;
-            justify-content: center;
-            border: 2px solid #ccc;
-            border-radius: 8px; /* More rounded */
-            font-size: 0.85em;
-            font-weight: bold;
-            transition: background-color 0.3s ease, border-color 0.3s ease;
-            position: relative; /* For precise label positioning */
-            color: #555; /* Default text color */
-        }
-
-        /* Icons styling */
-        .parking-spot .spot-icon {
-            font-size: 2.5em; /* Larger icons */
-            margin-bottom: 2px; /* Small space between icon and text */
-            line-height: 1; /* Prevent extra space around icon */
-        }
-
-        /* Spot label (S1, S2 etc.) */
-        .spot-label {
-            font-size: 0.8em; /* Slightly smaller label */
-            font-weight: 600;
-            color: #444; /* Default label color */
-        }
-
-        /* Status-specific styles */
-        .parking-spot.available {
-            background-color: #e6ffe6; /* Lightest green */
-            border-color: #28a745; /* Green border */
-            color: #28a745; /* Green for label if no icon */
-        }
-        .parking-spot.available .spot-icon {
-            color: #28a745; /* Ensure icon is green if present for consistency */
-        }
-
-        .parking-spot.occupied {
-            background-color: #ffe6e6; /* Lightest red */
-            border-color: #dc3545; /* Red border */
-            color: #dc3545; /* Red for icon/label */
-        }
-
-        .parking-spot.malfunction {
-            background-color: #fff8e6; /* Lightest yellow */
-            border-color: #ffc107; /* Yellow border */
-            color: #ffc107; /* Yellow for icon/label */
-        }
-
-        /* Media Queries for Responsiveness */
-        @media (max-width: 1200px) {
-            .parking-lot-card {
-                width: calc(50% - 30px); /* 2 cards per row on medium screens */
-            }
-        }
-        @media (max-width: 768px) {
-            .parking-lot-card {
-                width: calc(100% - 20px); /* 1 card per row on small screens */
-                padding: 20px;
-            }
-            .parking-map-grid {
-                grid-template-columns: repeat(4, 1fr); /* 4 columns on smaller screens to make spots bigger */
-                gap: 8px;
-            }
-            .parking-lot-card h2 {
-                font-size: 1.8em;
-            }
-        }
-        @media (max-width: 480px) {
-            .parking-map-grid {
-                grid-template-columns: repeat(3, 1fr); /* 3 columns on very small screens */
-            }
-            .parking-spot {
-                height: 70px;
-            }
-            .parking-spot .spot-icon {
-                font-size: 2em;
-            }
-            .spot-label {
-                font-size: 0.7em;
-            }
-            .legend-item {
-                font-size: 0.9em;
-            }
-            .legend-container {
-                flex-direction: column;
-                gap: 10px;
-            }
-        }
-
-    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <h1>Smart Parking Status Dashboard</h1>
-    <div id="status-message">Loading parking data...</div>
+    <div class="dashboard-header">
+        <h1>Smart Parking Status Dashboard</h1>
+        <div id="status-message">Loading parking data...</div>
+    </div>
 
     <div class="legend-container">
         <div class="legend-item available">
@@ -233,20 +26,64 @@
         </div>
     </div>
 
-    <div class="dashboard-container">
-        <div id="parking-lot-A" class="parking-lot-card">
-            <h2>Parking Lot A</h2>
-            <div class="parking-map-grid"></div>
-        </div>
-        <div id="parking-lot-B" class="parking-lot-card">
-            <h2>Parking Lot B</h2>
-            <div class="parking-map-grid"></div>
-        </div>
-        <div id="parking-lot-C" class="parking-lot-card">
-            <h2>Parking Lot C</h2>
-            <div class="parking-map-grid"></div>
-        </div>
+    <div class="main-content-wrapper">
+        <div class="stats-panel">
+            <h2>Overall Statistics</h2>
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper total"><i class="fas fa-th-large"></i></div>
+                    <span class="stat-label">Total Spots</span>
+                    <span id="total-spots" class="stat-value">0</span>
+                </div>
+                <div class="stat-card available-card">
+                    <div class="stat-icon-wrapper available"><i class="fas fa-parking"></i></div>
+                    <span class="stat-label">Available Spots</span>
+                    <span id="available-spots" class="stat-value">0</span>
+                </div>
+                <div class="stat-card occupied-card">
+                    <div class="stat-icon-wrapper occupied"><i class="fas fa-car"></i></div>
+                    <span class="stat-label">Occupied Spots</span>
+                    <span id="occupied-spots" class="stat-value">0</span>
+                </div>
+                <div class="stat-card malfunction-card">
+                    <div class="stat-icon-wrapper malfunction"><i class="fas fa-tools"></i></div>
+                    <span class="stat-label">Malfunctioning Spots</span>
+                    <span id="malfunction-spots" class="stat-value">0</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper rate"><i class="fas fa-chart-pie"></i></div>
+                    <span class="stat-label">Occupancy Rate</span>
+                    <span id="occupancy-rate" class="stat-value">0%</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper duration"><i class="fas fa-clock"></i></div>
+                    <span class="stat-label">Avg. Occupancy Duration</span>
+                    <span id="avg-duration" class="stat-value">0 min</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper temperature"><i class="fas fa-thermometer-half"></i></div>
+                    <span class="stat-label">Avg. Temperature:</span>
+                    <span id="avg-temperature" class="stat-value">0 °C</span>
+                </div>
+            </div>
         </div>
 
-    <script src="script.js"></script> </body>
+        <div class="dashboard-container">
+            <div id="parking-lot-A" class="parking-lot-card">
+                <h2>Parking Lot A</h2>
+                <div class="parking-map-grid"></div>
+            </div>
+            <div id="parking-lot-B" class="parking-lot-card">
+                <h2>Parking Lot B</h2>
+                <div class="parking-map-grid"></div>
+            </div>
+            <div id="parking-lot-C" class="parking-lot-card">
+                <h2>Parking Lot C</h2>
+                <div class="parking-map-grid"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
 </html>
