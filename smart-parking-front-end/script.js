@@ -1,6 +1,14 @@
 const BACKEND_API_URL = 'http://localhost:8085/api/parking-status'; // Ensure this matches your Java backend port
-const UPDATE_INTERVAL_MS = 3000; // Update every 3 seconds for a smoother feel (adjust as needed)
-const TOTAL_SLOTS_PER_LOT = 50; // Each parking lot has 50 spots, as per your design
+const UPDATE_INTERVAL_MS = 3000; // Update every 3 seconds
+const TOTAL_SLOTS_PER_LOT = 50; // Each parking lot has 50 spots
+const MAX_DATA_POINTS = 20; // Store last 20 data points for the line chart (1 hour with 3s updates ~ 1200s / 60 = 20 points)
+
+// Store historical data for occupancy trend
+let occupancyHistory = [];
+
+// Chart.js instances
+let occupancyTrendChart = null;
+let statusPieChart = null;
 
 // Function to fetch parking data from the backend API
 async function fetchParkingData() {
@@ -18,7 +26,7 @@ async function fetchParkingData() {
     } catch (error) {
         console.error("Error fetching parking data:", error);
         statusMessage.textContent = `Error: Could not connect to backend. Please ensure the Java backend is running at ${BACKEND_API_URL}.`;
-        return []; // Return empty array on error to prevent further issues
+        return [];
     }
 }
 
@@ -53,7 +61,6 @@ function renderParkingLots(parkingData) {
             spotElement.classList.add('parking-spot');
 
             const spotInfo = currentLotData[i];
-            // Default to 'available' if no data or status is unclear
             const status = spotInfo && spotInfo.status ? spotInfo.status.toLowerCase() : 'available';
 
             const iconElement = document.createElement('i');
@@ -90,9 +97,9 @@ function renderParkingLots(parkingData) {
     });
 }
 
-// Function to update overall statistics
+// Function to update overall statistics and charts
 function updateOverallStatistics(parkingData) {
-    let totalSpots = TOTAL_SLOTS_PER_LOT * 3; // Assuming 3 lots
+    let totalSpots = TOTAL_SLOTS_PER_LOT * 3;
     let availableSpots = 0;
     let occupiedSpots = 0;
     let malfunctionSpots = 0;
@@ -102,9 +109,7 @@ function updateOverallStatistics(parkingData) {
     let temperatureCount = 0;
 
     parkingData.forEach(spot => {
-        // Ensure status exists and convert to lower case safely
         const status = spot.status ? String(spot.status).toLowerCase() : '';
-
         switch (status) {
             case 'available':
             case 'free':
@@ -112,7 +117,6 @@ function updateOverallStatistics(parkingData) {
                 break;
             case 'occupied':
                 occupiedSpots++;
-                // **** CHANGED: Now using spot.duration ****
                 if (spot.duration !== undefined && spot.duration !== null && !isNaN(Number(spot.duration))) {
                     totalOccupancyDuration += Number(spot.duration);
                     occupiedCountForDuration++;
@@ -123,7 +127,6 @@ function updateOverallStatistics(parkingData) {
                 break;
         }
 
-        // **** CHANGED: Now using spot.temperature ****
         if (spot.temperature !== undefined && spot.temperature !== null && !isNaN(Number(spot.temperature))) {
             totalTemperature += Number(spot.temperature);
             temperatureCount++;
@@ -141,6 +144,85 @@ function updateOverallStatistics(parkingData) {
     document.getElementById('occupancy-rate').textContent = `${occupancyRate}%`;
     document.getElementById('avg-duration').textContent = `${avgDuration} min`;
     document.getElementById('avg-temperature').textContent = `${avgTemperature} °C`;
+
+    // Update occupancy trend data
+    const timestamp = new Date().toLocaleTimeString();
+    occupancyHistory.push({ time: timestamp, rate: parseFloat(occupancyRate) });
+    if (occupancyHistory.length > MAX_DATA_POINTS) {
+        occupancyHistory.shift(); // Remove oldest data point
+    }
+
+    // Update charts
+    updateCharts(availableSpots, occupiedSpots, malfunctionSpots);
+}
+
+// Function to initialize and update charts
+function updateCharts(availableSpots, occupiedSpots, malfunctionSpots) {
+    // Initialize or update occupancy trend line chart
+    if (!occupancyTrendChart) {
+        const ctx = document.getElementById('occupancy-trend-chart').getContext('2d');
+        occupancyTrendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: occupancyHistory.map(data => data.time),
+                datasets: [{
+                    label: 'Occupancy Rate (%)',
+                    data: occupancyHistory.map(data => data.rate),
+                    borderColor: '#007bff',
+                    backgroundColor: 'rgba(0, 123, 255, 0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: { title: { display: true, text: 'Time' } },
+                    y: { 
+                        title: { display: true, text: 'Occupancy Rate (%)' },
+                        min: 0,
+                        max: 100
+                    }
+                },
+                plugins: {
+                    legend: { display: true, position: 'top' }
+                }
+            }
+        });
+    } else {
+        occupancyTrendChart.data.labels = occupancyHistory.map(data => data.time);
+        occupancyTrendChart.data.datasets[0].data = occupancyHistory.map(data => data.rate);
+        occupancyTrendChart.update();
+    }
+
+    // Initialize or update status pie chart
+    if (!statusPieChart) {
+        const ctx = document.getElementById('status-pie-chart').getContext('2d');
+        statusPieChart = new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: ['Available', 'Occupied', 'Malfunction'],
+                datasets: [{
+                    data: [availableSpots, occupiedSpots, malfunctionSpots],
+                    backgroundColor: ['#28a745', '#dc3545', '#ffc107'],
+                    borderColor: ['#ffffff', '#ffffff', '#ffffff'],
+                    borderWidth: 2
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: true, position: 'right' }
+                }
+            }
+        });
+    } else {
+        statusPieChart.data.datasets[0].data = [availableSpots, occupiedSpots, malfunctionSpots];
+        statusPieChart.update();
+    }
 }
 
 // Main function to initialize the dashboard and set up periodic updates

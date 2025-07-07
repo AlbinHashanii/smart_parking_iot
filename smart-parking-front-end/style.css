@@ -73,29 +73,27 @@ h1 {
 .legend-item.malfunction { color: #ffc107; }
 .legend-item.malfunction .legend-color-box { background-color: #fff3cd; border-color: #ffc107; }
 
-
 .main-content-wrapper {
     display: flex;
-    flex-direction: column; /* Stack stats above lots */
-    align-items: center; /* Center content horizontally */
-    gap: 30px; /* Gap between stats panel and dashboard container */
+    flex-direction: column;
+    align-items: center;
+    gap: 30px;
     width: 100%;
     max-width: 100vw;
     padding: 0 20px;
     box-sizing: border-box;
-    overflow-x: auto; /* Allows horizontal scrolling if total content overflows */
+    overflow-x: auto;
 }
 
-/* Dashboard container specifically for parking lots (always side-by-side) */
 .dashboard-container {
     display: flex;
-    flex-wrap: nowrap; /* Force parking lot cards to stay on one line */
+    flex-wrap: nowrap;
     gap: 30px;
-    justify-content: flex-start; /* Align lots to the start within their row */
-    flex-shrink: 0; /* Prevent dashboard container from shrinking */
-    padding-bottom: 10px; /* Add some padding if scrollbar appears */
-    width: fit-content; /* Allow the container to be as wide as its content */
-    margin: 0 auto; /* Center the dashboard container itself */
+    justify-content: flex-start;
+    flex-shrink: 0;
+    padding-bottom: 10px;
+    width: fit-content;
+    margin: 0 auto;
 }
 
 .parking-lot-card {
@@ -104,8 +102,8 @@ h1 {
     border-radius: 15px;
     box-shadow: 0 6px 15px rgba(0,0,0,0.08);
     padding: 30px;
-    width: 400px; /* Fixed width for each card to ensure consistent size */
-    flex-shrink: 0; /* Important: Prevent individual cards from shrinking */
+    width: 400px;
+    flex-shrink: 0;
     box-sizing: border-box;
     text-align: center;
     display: flex;
@@ -128,7 +126,6 @@ h1 {
     font-weight: 600;
 }
 
-/* --- Map-like Grid Layout for Parking Spots --- */
 .parking-map-grid {
     display: grid;
     grid-template-columns: repeat(5, 1fr);
@@ -149,7 +146,7 @@ h1 {
     justify-content: center;
     border: 2px solid #ccc;
     border-radius: 8px;
-    font-size: 0.85em;
+    font-size: 0脊 .85em;
     font-weight: bold;
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
     position: relative;
@@ -169,7 +166,6 @@ h1 {
     color: #444;
 }
 
-/* Status-specific styles */
 .parking-spot.available {
     background-color: #eaf7ed;
     border-color: #4CAF50;
@@ -178,33 +174,30 @@ h1 {
 .parking-spot.available .spot-icon {
     color: #4CAF50;
 }
-
 .parking-spot.occupied {
     background-color: #fde8ea;
     border-color: #f44336;
     color: #dc3545;
 }
-
 .parking-spot.malfunction {
     background-color: #fff9e6;
     border-color: #ff9800;
     color: #ffc107;
 }
 
-/* --- Statistics Panel Styles --- */
 .stats-panel {
     background-color: #ffffff;
     border: 1px solid #e0e0e0;
     border-radius: 15px;
     box-shadow: 0 6px 15px rgba(0,0,0,0.08);
     padding: 30px;
-    width: 100%; /* Make stats panel take full width */
-    max-width: 1500px; /* Limit max width for a cleaner look */
+    width: 100%;
+    max-width: 1500px;
     box-sizing: border-box;
     display: flex;
-    flex-direction: column; /* Keep content stacked within the panel */
+    flex-direction: column;
     align-items: center;
-    flex-shrink: 0; /* Prevent it from shrinking */
+    flex-shrink: 0;
 }
 
 .stats-panel h2 {
@@ -221,7 +214,6 @@ h1 {
 
 .stats-grid {
     display: grid;
-    /* Adjusted to create more columns for horizontal layout */
     grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
     gap: 15px;
     width: 100%;
@@ -258,7 +250,6 @@ h1 {
     box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
-/* Icon background colors */
 .stat-icon-wrapper.total { background-color: #6c757d; }
 .stat-icon-wrapper.available { background-color: #28a745; }
 .stat-icon-wrapper.occupied { background-color: #dc3545; }
@@ -266,7 +257,6 @@ h1 {
 .stat-icon-wrapper.rate { background-color: #007bff; }
 .stat-icon-wrapper.duration { background-color: #6f42c1; }
 .stat-icon-wrapper.temperature { background-color: #17a2b8; }
-
 
 .stat-label {
     font-weight: 500;
@@ -285,19 +275,51 @@ h1 {
 .stat-card.occupied-card .stat-value { color: #dc3545; }
 .stat-card.malfunction-card .stat-value { color: #ffc107; }
 
+.charts-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    width: 100%;
+    margin-top: 30px;
+    justify-content: center;
+}
+
+.chart-card {
+    background-color: #fdfdfd;
+    border: 1px solid #e9eef2;
+    border-radius: 10px;
+    padding: 20px;
+    width: 100%;
+    max-width: 600px;
+    box-sizing: border-box;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+}
+
+.chart-card h3 {
+    margin-top: 0;
+    color: #2980b9;
+    font-size: 1.5em;
+    text-align: center;
+    margin-bottom: 15px;
+}
+
+.chart-card canvas {
+    max-height: 300px;
+}
 
 /* Media Queries for Responsiveness */
 @media (max-width: 1200px) {
-    /* Main wrapper already changes to column direction */
     .dashboard-container {
-        /* No specific width adjustments for parking-lot-card here as they are fixed */
-        gap: 20px; /* Adjust gap for smaller screens */
+        gap: 20px;
     }
-
     .stats-grid {
-        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); /* More compact on smaller screens */
+        grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    }
+    .chart-card {
+        max-width: 500px;
     }
 }
+
 @media (max-width: 768px) {
     h1 {
         font-size: 2.2em;
@@ -313,7 +335,7 @@ h1 {
         font-size: 1.8em;
     }
     .stats-grid {
-        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        grid-template-columns: repeat(auto-fit minh(120px, 1fr));
         gap: 10px;
     }
     .stat-value {
@@ -322,7 +344,11 @@ h1 {
     .stat-label {
         font-size: 0.85em;
     }
+    .chart-card {
+        max-width: 100%;
+    }
 }
+
 @media (max-width: 480px) {
     h1 {
         font-size: 1.8em;
@@ -348,10 +374,17 @@ h1 {
         gap: 10px;
     }
     .legend-container {
-        flex-direction: column; /* Stack legend items vertically */
+        flex-direction: column;
         gap: 10px;
     }
     .stats-grid {
-        grid-template-columns: 1fr; /* Stack stats vertically on very small screens */
+        grid-template-columns: 1fr;
+    }
+    .charts-container {
+        flex-direction: column;
+        gap: 15px;
+    }
+    .chart-card {
+        max-width: 100%;
     }
 }

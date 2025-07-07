@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
 </head>
 <body>
     <div class="dashboard-header">
@@ -64,6 +65,16 @@
                     <div class="stat-icon-wrapper temperature"><i class="fas fa-thermometer-half"></i></div>
                     <span class="stat-label">Avg. Temperature:</span>
                     <span id="avg-temperature" class="stat-value">0 °C</span>
+                </div>
+            </div>
+            <div class="charts-container">
+                <div class="chart-card">
+                    <h3>Occupancy Rate Over Time</h3>
+                    <canvas id="occupancy-trend-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Parking Spot Status Distribution</h3>
+                    <canvas id="status-pie-chart"></canvas>
                 </div>
             </div>
         </div>

@@ -31,7 +31,7 @@ public class SensorDataProducer {
     // Probability for a *single available spot* to get occupied per second
     // Adjusted downwards to slow down arrivals a bit, expecting longer average duration.
     // This value will need fine-tuning based on how "busy" you want the lots to appear.
-    private static final double ARRIVAL_PROBABILITY_PER_SECOND = 0.002; // Roughly 0.2% chance per available spot per second
+    private static final double ARRIVAL_PROBABILITY_PER_SECOND = 0.02; // Roughly 0.2% chance per available spot per second
 
     // Probability for any spot to malfunction per second. Very low chance.
     private static final double MALFUNCTION_PROBABILITY_PER_SECOND = 0.00005; // 0.005% chance per spot per second (very rare)

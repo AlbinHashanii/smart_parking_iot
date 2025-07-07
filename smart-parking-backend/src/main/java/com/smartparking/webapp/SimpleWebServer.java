@@ -1,4 +1,4 @@
-package main.java.com.smartparking.webapp;
+package com.smartparking.webapp;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -96,7 +96,7 @@ public class SimpleWebServer {
                             ParkingSlotState state = new ParkingSlotState(parkingLotName, slotId, status, vehicleLicensePlate, duration, temperature);
                             parkingSlotStates.put(slotKey, state);
 
-                            // System.out.println("Received: " + parkingLotName + " S" + slotId + " -> " + status + (vehicleLicensePlate != null ? " (" + vehicleLicensePlate + ")" : ""));
+                            System.out.println("Received: " + parkingLotName + " S" + slotId + " -> " + status + (vehicleLicensePlate != null ? " (" + vehicleLicensePlate + ")" : ""));
 
                         } catch (Exception e) {
                             System.err.println("Error parsing Kafka message: " + record.value() + " - " + e.getMessage());
