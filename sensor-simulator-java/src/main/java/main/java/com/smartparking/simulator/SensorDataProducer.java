@@ -7,6 +7,7 @@ import org.apache.kafka.common.serialization.StringSerializer;
 import org.json.simple.JSONObject;
 
 import java.time.Instant;
+import java.time.LocalTime;
 import java.util.Map;
 import java.util.Properties;
 import java.util.Random;
@@ -24,29 +25,20 @@ public class SensorDataProducer {
     private static final int NUM_SLOTS_PER_LOT = 50; // Each lot has 50 slots
     private static final Random random = new Random();
 
-    // New: Sample license plates
+    // Sample license plates
     private static final String[] LICENSE_PLATES = {"ABC-123", "XYZ-789", "DEF-456", "MNO-007", "QWE-111", "RTY-222", "IOP-333"};
 
-    // --- Simulation parameters - ADJUSTED for your requirements ---
-    // Probability for a *single available spot* to get occupied per second
-    // Adjusted downwards to slow down arrivals a bit, expecting longer average duration.
-    // This value will need fine-tuning based on how "busy" you want the lots to appear.
-    private static final double ARRIVAL_PROBABILITY_PER_SECOND = 0.02; // Roughly 0.2% chance per available spot per second
+    // --- Base malfunction probability per second per spot ---
+    private static final double MALFUNCTION_PROBABILITY_PER_SECOND = 0.00005;
 
-    // Probability for any spot to malfunction per second. Very low chance.
-    private static final double MALFUNCTION_PROBABILITY_PER_SECOND = 0.00005; // 0.005% chance per spot per second (very rare)
-
-    // Average occupancy duration: 1 minute (60 seconds)
+    // Average occupancy duration and variance (seconds)
     private static final long AVG_OCCUPANCY_DURATION_SECONDS = 60;
-    // Variance: +/- 30 seconds (so 30s to 90s duration)
     private static final long OCCUPANCY_DURATION_VARIANCE_SECONDS = 30;
 
-    // Average malfunction duration: 5 minutes (300 seconds)
+    // Average malfunction duration and variance (seconds)
     private static final long AVG_MALFUNCTION_DURATION_SECONDS = 5 * 60;
-    // Variance: +/- 2 minutes (so 3 to 7 minutes duration)
     private static final long MALFUNCTION_DURATION_VARIANCE_SECONDS = 2 * 60;
 
-    // In-memory state for each parking spot
     private static final Map<String, ParkingSlotState> parkingSlotStates = new ConcurrentHashMap<>();
 
     private KafkaProducer<String, String> producer;
@@ -61,7 +53,6 @@ public class SensorDataProducer {
         props.put(ProducerConfig.LINGER_MS_CONFIG, 1);
         this.producer = new KafkaProducer<>(props);
 
-        // Initialize all parking slots to "free"
         for (String lotName : PARKING_LOT_NAMES) {
             for (int i = 1; i <= NUM_SLOTS_PER_LOT; i++) {
                 String slotKey = lotName + "-" + i;
@@ -70,46 +61,72 @@ public class SensorDataProducer {
         }
     }
 
+    private double getTimeBasedArrivalProbability() {
+        // Define time ranges in hours (24h format)
+        LocalTime time = LocalTime.now();
+        int hour = time.getHour();
+
+        // Base probabilities by time of day (per second)
+        // Night low traffic: 0.005
+        // Morning rush (7-9): 0.05
+        // Midday normal (10-16): 0.015
+        // Evening rush (17-19): 0.045
+        // Late evening (20-23): 0.01
+
+        if (hour >= 7 && hour < 9) {
+            return 0.05;
+        } else if (hour >= 17 && hour < 19) {
+            return 0.045;
+        } else if (hour >= 10 && hour < 17) {
+            return 0.015;
+        } else if (hour >= 20 && hour < 24) {
+            return 0.01;
+        } else {
+            return 0.005; // Night & early morning low traffic
+        }
+    }
+
     private void simulateAndSendUpdates() {
         long currentTimeMillis = System.currentTimeMillis();
-        // The simulation interval is 100ms. We need to convert per-second probabilities
-        // to per-interval probabilities.
-        double intervalSeconds = 100.0 / 1000.0; // 0.1 seconds
+        double intervalSeconds = 100.0 / 1000.0; // 0.1 seconds interval
+
+        double baseArrivalProb = getTimeBasedArrivalProbability();
+
+        // Add small ±10% randomness to arrival probability per tick
+        double arrivalProb = baseArrivalProb * (0.9 + 0.2 * random.nextDouble());
+        // Add small ±20% randomness to malfunction probability per tick
+        double malfunctionProb = MALFUNCTION_PROBABILITY_PER_SECOND * (0.8 + 0.4 * random.nextDouble());
 
         for (Map.Entry<String, ParkingSlotState> entry : parkingSlotStates.entrySet()) {
             ParkingSlotState slot = entry.getValue();
-            String oldStatus = slot.getStatus(); // Store old status for comparison
+            String oldStatus = slot.getStatus();
 
-            // --- Malfunction Logic ---
-            if (slot.getStatus().equals("malfunction")) {
+            // Malfunction logic
+            if ("malfunction".equals(slot.getStatus())) {
                 if (currentTimeMillis >= slot.getEventEndTimeMillis()) {
-                    // Malfunction duration over, return to previous state (e.g., free)
                     System.out.println("Slot " + slot.getParkingLotName() + "-" + slot.getSlotId() + " malfunction ended.");
                     slot.setStatus("free");
-                    slot.setVehicleLicensePlate(null); // No car in a malfunctioning spot
-                    slot.setEventEndTimeMillis(0); // Reset
+                    slot.setVehicleLicensePlate(null);
+                    slot.setEventEndTimeMillis(0);
                 }
-            } else if (random.nextDouble() < MALFUNCTION_PROBABILITY_PER_SECOND * intervalSeconds) { // Adjusted probability
-                // Random chance for a spot to malfunction
+            } else if (random.nextDouble() < malfunctionProb * intervalSeconds) {
                 System.out.println("Slot " + slot.getParkingLotName() + "-" + slot.getSlotId() + " went into malfunction!");
                 slot.setStatus("malfunction");
-                slot.setVehicleLicensePlate(null); // No car in a malfunctioning spot
+                slot.setVehicleLicensePlate(null);
                 slot.setEventEndTimeMillis(currentTimeMillis + generateRandomDurationMillis(AVG_MALFUNCTION_DURATION_SECONDS, MALFUNCTION_DURATION_VARIANCE_SECONDS));
             }
 
-            // --- Occupancy Logic (only if not in malfunction) ---
-            if (!slot.getStatus().equals("malfunction")) { // Ensure we don't try to occupy a malfunctioning spot
-                if (slot.getStatus().equals("occupied")) {
+            // Occupancy logic
+            if (!"malfunction".equals(slot.getStatus())) {
+                if ("occupied".equals(slot.getStatus())) {
                     if (currentTimeMillis >= slot.getEventEndTimeMillis()) {
-                        // Car leaves
                         System.out.println("Car left slot " + slot.getParkingLotName() + "-" + slot.getSlotId() + " (" + slot.getVehicleLicensePlate() + ").");
                         slot.setStatus("free");
                         slot.setVehicleLicensePlate(null);
-                        slot.setEventEndTimeMillis(0); // Reset
+                        slot.setEventEndTimeMillis(0);
                     }
-                } else if (slot.getStatus().equals("free")) {
-                    if (random.nextDouble() < ARRIVAL_PROBABILITY_PER_SECOND * intervalSeconds) { // Adjusted probability
-                        // Car arrives
+                } else if ("free".equals(slot.getStatus())) {
+                    if (random.nextDouble() < arrivalProb * intervalSeconds) {
                         String licensePlate = LICENSE_PLATES[random.nextInt(LICENSE_PLATES.length)];
                         System.out.println("Car arrived at slot " + slot.getParkingLotName() + "-" + slot.getSlotId() + " (" + licensePlate + ").");
                         slot.setStatus("occupied");
@@ -119,7 +136,6 @@ public class SensorDataProducer {
                 }
             }
 
-            // If status changed, send an update
             if (!oldStatus.equals(slot.getStatus())) {
                 sendParkingEvent(slot);
             }
@@ -129,11 +145,16 @@ public class SensorDataProducer {
     private long generateRandomDurationMillis(long averageSeconds, long varianceSeconds) {
         long baseDuration = averageSeconds * 1000;
         long variance = varianceSeconds * 1000;
-        // Generate a random duration within [average - variance, average + variance]
-        // Ensure minimum duration is positive
         return Math.max(1000, baseDuration + (long) (random.nextDouble() * 2 * variance) - variance);
     }
 
+    private double simulateTemperature() {
+        LocalTime time = LocalTime.now();
+        double hour = time.getHour() + time.getMinute() / 60.0;
+        double baseTemp = 22 + 7 * Math.sin((hour - 6) / 24 * 2 * Math.PI);
+        double noise = (random.nextDouble() - 0.5); // ±0.5 degree
+        return baseTemp + noise;
+    }
 
     private void sendParkingEvent(ParkingSlotState slot) {
         JSONObject sensorData = new JSONObject();
@@ -142,21 +163,19 @@ public class SensorDataProducer {
         sensorData.put("timestamp", Instant.now().toString());
         sensorData.put("status", slot.getStatus());
 
-        // Duration in seconds (approximated remaining duration for occupied/malfunction states)
         long durationMillisRemaining = slot.getEventEndTimeMillis() - System.currentTimeMillis();
-        if (slot.getStatus().equals("occupied") || slot.getStatus().equals("malfunction")) {
-            sensorData.put("duration", Math.max(0, (int)(durationMillisRemaining / 1000))); // Remaining duration in seconds
+        if ("occupied".equals(slot.getStatus()) || "malfunction".equals(slot.getStatus())) {
+            sensorData.put("duration", Math.max(0, (int) (durationMillisRemaining / 1000)));
         } else {
-            sensorData.put("duration", 0); // Not applicable for free spots
+            sensorData.put("duration", 0);
         }
 
-        sensorData.put("temperature", 20 + random.nextInt(15)); // Still random temp
+        sensorData.put("temperature", (int) Math.round(simulateTemperature()));
 
-        // Vehicle license plate is only relevant for "occupied" status
-        if (slot.getVehicleLicensePlate() != null && slot.getStatus().equals("occupied")) {
+        if (slot.getVehicleLicensePlate() != null && "occupied".equals(slot.getStatus())) {
             sensorData.put("vehicle_license_plate", slot.getVehicleLicensePlate());
         } else {
-            sensorData.put("vehicle_license_plate", null); // Explicitly send JSON null if not occupied
+            sensorData.put("vehicle_license_plate", null);
         }
 
         String jsonString = sensorData.toJSONString();
@@ -164,10 +183,7 @@ public class SensorDataProducer {
         ProducerRecord<String, String> record = new ProducerRecord<>(KAFKA_TOPIC, recordKey, jsonString);
 
         producer.send(record, (metadata, exception) -> {
-            if (exception == null) {
-                // Uncomment for detailed log of sent records
-                // System.out.println("Sent record for " + recordKey + " with status " + slot.getStatus() + " to topic " + metadata.topic() + " offset " + metadata.offset());
-            } else {
+            if (exception != null) {
                 System.err.println("Error sending record for " + recordKey + ": " + exception.getMessage());
                 exception.printStackTrace();
             }
@@ -177,10 +193,8 @@ public class SensorDataProducer {
     public void startSimulation() {
         System.out.println("Starting sensor data simulation. Sending data to topic: " + KAFKA_TOPIC);
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        // Run simulation every 100ms
         scheduler.scheduleAtFixedRate(this::simulateAndSendUpdates, 0, 100, TimeUnit.MILLISECONDS);
 
-        // Add a shutdown hook to flush and close producer on exit
         Runtime.getRuntime().addShutdownHook(new Thread(() -> {
             System.out.println("Shutting down sensor data producer...");
             producer.flush();
@@ -190,13 +204,12 @@ public class SensorDataProducer {
         }));
     }
 
-    // --- Inner Class to hold parking slot state ---
     private static class ParkingSlotState {
-        private String parkingLotName;
-        private int slotId;
-        private String status; // "free", "occupied", "malfunction"
+        private final String parkingLotName;
+        private final int slotId;
+        private String status; // free, occupied, malfunction
         private String vehicleLicensePlate;
-        private long eventEndTimeMillis; // Timestamp when current state (occupied/malfunction) should end
+        private long eventEndTimeMillis;
 
         public ParkingSlotState(String parkingLotName, int slotId, String status) {
             this.parkingLotName = parkingLotName;
@@ -206,7 +219,6 @@ public class SensorDataProducer {
             this.eventEndTimeMillis = 0;
         }
 
-        // Getters and Setters
         public String getParkingLotName() { return parkingLotName; }
         public int getSlotId() { return slotId; }
         public String getStatus() { return status; }
@@ -216,7 +228,6 @@ public class SensorDataProducer {
         public long getEventEndTimeMillis() { return eventEndTimeMillis; }
         public void setEventEndTimeMillis(long eventEndTimeMillis) { this.eventEndTimeMillis = eventEndTimeMillis; }
     }
-
 
     public static void main(String[] args) {
         new SensorDataProducer().startSimulation();

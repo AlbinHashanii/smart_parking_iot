@@ -48,12 +48,10 @@ public class SmartParkingApp {
                 functions.get_json_object(functions.col("json_data"), "$.temperature").cast("int"));
 
         // Separate out "bad" records (missing parking_lot_name) for inspection
-        // Select specific columns for badRecords, including the problematic 'json_data'
         Dataset<Row> badRecords = parsed.filter(functions.col("parking_lot_name").isNull())
-                                        .select(functions.col("json_data"), functions.col("kafka_ingest_time")); // KEEP json_data
+                                        .select(functions.col("json_data"), functions.col("kafka_ingest_time")); // keep original JSON for debugging
 
-        // Stream for bad records to console
-        badRecords.writeStream()
+        StreamingQuery badRecordsQuery = badRecords.writeStream()
             .format("console")
             .option("truncate", false)
             .trigger(Trigger.ProcessingTime("30 seconds"))
@@ -75,7 +73,6 @@ public class SmartParkingApp {
                 "temperature"
             );
 
-        // Write historical data to Cassandra
         StreamingQuery histQuery = historical.writeStream()
             .format("org.apache.spark.sql.cassandra")
             .option("keyspace", "parking")
@@ -91,26 +88,26 @@ public class SmartParkingApp {
                 functions.coalesce(functions.col("timestamp_from_json"), functions.col("kafka_ingest_time")))
             .select("parking_lot_name", "slot_id", "status", "last_updated");
 
-        // Write current status to Cassandra
         StreamingQuery statusQuery = currentStatus.writeStream()
             .format("org.apache.spark.sql.cassandra")
             .option("keyspace", "parking")
             .option("table", "parking_spot_current_status")
             .option("checkpointLocation", "/tmp/spark-checkpoint/current_status")
-            .outputMode("append") // Use "append" since it acts as upsert on PK for Cassandra
+            .outputMode("append")
             .trigger(Trigger.ProcessingTime("5 seconds"))
             .start();
 
-        // Write historical data to console (for debugging)
-        historical.writeStream()
+        // Optional: Write historical data to console for debugging
+        StreamingQuery consoleQuery = historical.writeStream()
             .format("console")
             .option("truncate", false)
             .trigger(Trigger.ProcessingTime("5 seconds"))
             .start();
 
+        // Wait for termination of any stream
         histQuery.awaitTermination();
         statusQuery.awaitTermination();
+        badRecordsQuery.awaitTermination();
+        consoleQuery.awaitTermination();
     }
 }
-
-// java -cp /home/webintel/Desktop/FIEK_MASTER/SEM2/IoT/smart-parking/sensor-simulator-java/target/sensor-simulator-1.0-SNAPSHOT.jar main.java.com.smartparking.simulator.SensorDataProducer

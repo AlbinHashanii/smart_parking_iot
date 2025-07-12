@@ -3,15 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Parking Map Dashboard</title>
+    <title>Smart Parking Control Center</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
 <body>
     <div class="dashboard-header">
-        <h1>Smart Parking Status Dashboard</h1>
+        <h1>Smart Parking Control Center</h1>
+        <div class="header-controls">
+            <button id="toggle-sidebar" class="control-btn" title="Toggle Sidebar" aria-label="Toggle Sidebar"><i class="fas fa-bars"></i></button>
+            <button id="toggle-theme" class="control-btn" title="Toggle Theme" aria-label="Toggle Theme"><i class="fas fa-moon"></i></button>
+            <select id="lot-filter" aria-label="Filter by Parking Lot">
+                <option value="all">All Lots</option>
+                <option value="Parking Lot A">Parking Lot A</option>
+                <option value="Parking Lot B">Parking Lot B</option>
+                <option value="Parking Lot C">Parking Lot C</option>
+            </select>
+            <select id="status-filter" aria-label="Filter by Status">
+                <option value="all">All Statuses</option>
+                <option value="free">Available</option>
+                <option value="occupied">Occupied</option>
+                <option value="malfunction">Malfunction</option>
+                <option value="sensor_failure">Sensor Failure</option>
+            </select>
+        </div>
         <div id="status-message">Loading parking data...</div>
     </div>
 
@@ -25,11 +44,15 @@
         <div class="legend-item malfunction">
             <i class="fas fa-tools"></i> Malfunction
         </div>
+        <div class="legend-item sensor-failure">
+            <i class="fas fa-exclamation-triangle"></i> Sensor Failure
+        </div>
     </div>
 
     <div class="main-content-wrapper">
-        <div class="stats-panel">
-            <h2>Overall Statistics</h2>
+        <div class="stats-panel" id="stats-panel">
+            <button id="collapse-sidebar" class="collapse-btn" aria-label="Collapse Sidebar"><i class="fas fa-chevron-left"></i></button>
+            <h2>Analytics Dashboard</h2>
             <div class="stats-grid">
                 <div class="stat-card">
                     <div class="stat-icon-wrapper total"><i class="fas fa-th-large"></i></div>
@@ -54,46 +77,77 @@
                 <div class="stat-card">
                     <div class="stat-icon-wrapper rate"><i class="fas fa-chart-pie"></i></div>
                     <span class="stat-label">Occupancy Rate</span>
+                    <div class="progress-container">
+                        <div id="occupancy-progress" class="progress-bar"></div>
+                    </div>
                     <span id="occupancy-rate" class="stat-value">0%</span>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon-wrapper duration"><i class="fas fa-clock"></i></div>
-                    <span class="stat-label">Avg. Occupancy Duration</span>
+                    <span class="stat-label">Avg. Duration</span>
                     <span id="avg-duration" class="stat-value">0 min</span>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon-wrapper temperature"><i class="fas fa-thermometer-half"></i></div>
-                    <span class="stat-label">Avg. Temperature:</span>
+                    <span class="stat-label">Avg. Temperature</span>
                     <span id="avg-temperature" class="stat-value">0 °C</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper turnover"><i class="fas fa-sync-alt"></i></div>
+                    <span class="stat-label">Turnover Rate</span>
+                    <span id="turnover-rate" class="stat-value">0/hr</span>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-icon-wrapper prediction"><i class="fas fa-brain"></i></div>
+                    <span class="stat-label">Predicted Availability</span>
+                    <span id="predicted-availability" class="stat-value">0 spots</span>
                 </div>
             </div>
             <div class="charts-container">
                 <div class="chart-card">
                     <h3>Occupancy Rate Over Time</h3>
+                    <div class="chart-controls">
+                        <button class="time-scale-btn active" data-scale="10m">10 Min</button>
+                        <button class="time-scale-btn" data-scale="1h">1 Hour</button>
+                        <button class="time-scale-btn" data-scale="1d">1 Day</button>
+                    </div>
                     <canvas id="occupancy-trend-chart"></canvas>
                 </div>
                 <div class="chart-card">
-                    <h3>Parking Spot Status Distribution</h3>
+                    <h3>Status Distribution</h3>
                     <canvas id="status-pie-chart"></canvas>
+                </div>
+                <div class="chart-card">
+                    <h3>Temperature Trend</h3>
+                    <canvas id="temperature-trend-chart"></canvas>
                 </div>
             </div>
         </div>
 
         <div class="dashboard-container">
-            <div id="parking-lot-A" class="parking-lot-card">
-                <h2>Parking Lot A</h2>
-                <div class="parking-map-grid"></div>
+            <div class="lot-controls">
+                <button id="toggle-3d" class="control-btn" title="Toggle 3D View" aria-label="Toggle 3D View">3D View</button>
+                <button id="toggle-heatmap" class="control-btn" title="Toggle Heatmap" aria-label="Toggle Heatmap">Heatmap</button>
             </div>
-            <div id="parking-lot-B" class="parking-lot-card">
-                <h2>Parking Lot B</h2>
-                <div class="parking-map-grid"></div>
-            </div>
-            <div id="parking-lot-C" class="parking-lot-card">
-                <h2>Parking Lot C</h2>
-                <div class="parking-map-grid"></div>
+            <div class="parking-lots-wrapper">
+                <div id="parking-lot-A" class="parking-lot-card" data-lot="A">
+                    <h2>Parking Lot A</h2>
+                    <div class="parking-map-grid" data-lot="A"></div>
+                </div>
+                <div id="parking-lot-B" class="parking-lot-card" data-lot="B">
+                    <h2>Parking Lot B</h2>
+                    <div class="parking-map-grid" data-lot="B"></div>
+                </div>
+                <div id="parking-lot-C" class="parking-lot-card" data-lot="C">
+                    <h2>Parking Lot C</h2>
+                    <div class="parking-map-grid" data-lot="C"></div>
+                </div>
             </div>
         </div>
     </div>
+
+    <div id="alerts-container"></div>
+    <div id="slot-details" class="slot-details hidden"></div>
 
     <script src="script.js"></script>
 </body>
