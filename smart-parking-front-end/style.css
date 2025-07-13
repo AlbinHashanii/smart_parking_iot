@@ -613,3 +613,70 @@ body.dark-mode #slot-details {
     .legend-item { flex-direction: column; gap: 6px; }
     .stats-grid { grid-template-columns: 1fr; }
 }
+
+.dashboard-footer {
+    width: 100%;
+    background: linear-gradient(145deg, #ffffff, #f6f9fc);
+    border-top: 1px solid #ccd6e0;
+    padding: 15px 20px;
+    text-align: center;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.1);
+    margin-top: 20px;
+}
+
+body.dark-mode .dashboard-footer {
+    background: linear-gradient(145deg, #2a3b57, #1e2a44);
+    border-top-color: #3e4e6e;
+    box-shadow: 0 -4px 10px rgba(0,0,0,0.4);
+}
+
+.footer-content {
+    display: flex;
+    justify-content: center;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+    font-size: 0.9em;
+    color: #4a4a4a;
+    font-weight: bold; /* Make all text bold */
+}
+
+body.dark-mode .footer-content {
+    color: #d9e2ec;
+}
+
+.footer-link {
+    color: #1a73e8;
+    text-decoration: none;
+    transition: color 0.3s ease;
+    font-weight: bold; /* Ensure link is also bold */
+}
+
+.footer-link:hover {
+    color: #1557b0;
+    text-decoration: underline;
+}
+
+body.dark-mode .footer-link {
+    color: #2f855a;
+}
+
+body.dark-mode .footer-link:hover {
+    color: #4e9a68;
+}
+
+@media (max-width: 768px) {
+    .footer-content {
+        flex-direction: column;
+        gap: 10px;
+    }
+    .dashboard-footer {
+        padding: 12px 15px;
+    }
+}
+
+@media (max-width: 480px) {
+    .footer-content {
+        font-size: 0.8em;
+    }
+}
