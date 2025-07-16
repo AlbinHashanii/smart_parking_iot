@@ -56,6 +56,42 @@ function showAlert(message) {
     setTimeout(() => alert.remove(), 5000);
 }
 
+
+document.getElementById('subscribe-form').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const name = document.getElementById('sub-name').value.trim();
+    const email = document.getElementById('sub-email').value.trim();
+    const alerts = document.getElementById('alerts-checkbox').checked;
+    const newsletter = document.getElementById('newsletter-checkbox').checked;
+    const messageEl = document.getElementById('subscribe-message');
+
+    try {
+        const response = await fetch('http://localhost:8085/api/subscribe', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                name,
+                email,
+                subscribed_to_parking_alerts: alerts,
+                subscribed_to_newsletter: newsletter
+            })
+        });
+
+        if (response.ok) {
+            messageEl.textContent = '✅ Successfully subscribed!';
+            messageEl.style.color = 'green';
+            document.getElementById('subscribe-form').reset();
+        } else {
+            throw new Error(await response.text());
+        }
+    } catch (err) {
+        messageEl.textContent = `❌ Subscription failed: ${err.message}`;
+        messageEl.style.color = 'red';
+    }
+});
+
+
 // Render parking lots
 function renderParkingLots(parkingData, lotFilter = 'all', statusFilter = 'all') {
     if (!parkingData || !Array.isArray(parkingData)) {
@@ -64,11 +100,16 @@ function renderParkingLots(parkingData, lotFilter = 'all', statusFilter = 'all')
         return;
     }
 
-    // Map statuses using the correct API field names
+    // Normalize and map statuses using corrected lot names
     const slotStatuses = parkingData.reduce((acc, spot) => {
         if (spot && spot.parkingLotName && spot.slotId && spot.status) {
-            if (!acc[spot.parkingLotName]) acc[spot.parkingLotName] = {};
-            acc[spot.parkingLotName][spot.slotId] = spot.status.toLowerCase();
+            const lotLetterMatch = spot.parkingLotName.match(/Lot-([A-Z])/);
+            if (!lotLetterMatch) return acc;
+            const lotLetter = lotLetterMatch[1];
+            const normalizedLotName = `Parking Lot ${lotLetter}`;
+
+            if (!acc[normalizedLotName]) acc[normalizedLotName] = {};
+            acc[normalizedLotName][spot.slotId] = spot.status.toLowerCase();
         } else {
             console.warn('Skipping invalid spot data:', spot);
         }
@@ -97,8 +138,6 @@ function renderParkingLots(parkingData, lotFilter = 'all', statusFilter = 'all')
             let status = slotStatuses[lotName]?.[i] || 'free';
             if (statusFilter !== 'all' && status !== statusFilter) continue;
 
-            console.log(`Rendering slot ${lotName} #${i} with status: ${status}`); // Debug each slot
-
             const spotElement = document.createElement('div');
             spotElement.classList.add('parking-spot', status);
             spotElement.dataset.lot = lotName;
@@ -119,7 +158,11 @@ function renderParkingLots(parkingData, lotFilter = 'all', statusFilter = 'all')
             spotsGrid.appendChild(spotElement);
 
             spotElement.addEventListener('click', () => showSlotDetails(
-                parkingData.find(s => s.parkingLotName === lotName && s.slotId === i) || { status: 'free' },
+                parkingData.find(s => {
+                    const sLotLetter = s.parkingLotName.match(/Lot-([A-Z])/)?.[1];
+                    const domLot = lotName.match(/Parking Lot ([A-Z])/)?.[1];
+                    return sLotLetter === domLot && s.slotId === i;
+                }) || { status: 'free' },
                 spotElement
             ));
         }
@@ -128,6 +171,7 @@ function renderParkingLots(parkingData, lotFilter = 'all', statusFilter = 'all')
         spotsGrid.classList.toggle('heatmap', isHeatmap);
     });
 }
+
 
 // Show slot details in modal
 function showSlotDetails(spotInfo, spotElement) {

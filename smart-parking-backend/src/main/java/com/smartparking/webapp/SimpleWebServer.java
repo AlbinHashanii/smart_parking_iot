@@ -8,186 +8,187 @@ import com.sun.net.httpserver.HttpServer;
 import com.sun.net.httpserver.HttpHandler;
 import com.sun.net.httpserver.HttpExchange;
 
-import org.apache.kafka.clients.consumer.ConsumerConfig;
-import org.apache.kafka.clients.consumer.ConsumerRecord;
-import org.apache.kafka.clients.consumer.ConsumerRecords;
-import org.apache.kafka.clients.consumer.KafkaConsumer;
+import org.apache.kafka.clients.consumer.*;
 import org.apache.kafka.common.serialization.StringDeserializer;
+
+import com.datastax.oss.driver.api.core.CqlSession;
+import com.datastax.oss.driver.api.core.cql.SimpleStatement;
 
 import java.io.IOException;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
+import java.nio.file.*;
 import java.time.Duration;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Map;
-import java.util.Properties;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
-import java.util.ArrayList; // Added for list conversion
+import java.util.*;
+import java.util.concurrent.*;
 
 public class SimpleWebServer {
 
     private static final int PORT = 8085;
-    private static final String API_PATH = "/api/parking-status";
-    private static final ObjectMapper objectMapper = new ObjectMapper();
-
     private static final String KAFKA_BROKERS = "localhost:9092";
     private static final String KAFKA_TOPIC = "parking-sensor-data";
-    private static final String KAFKA_GROUP_ID = "parking-status-aggregator";
+    private static final String KAFKA_GROUP = "parking-status-aggregator";
+    private static final String KEYSPACE = "parking";
+    private static final String SUB_TABLE = "subscriber";
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    // In-memory state for parking spots, updated by Kafka Consumer
-    private static final Map<String, ParkingSlotState> parkingSlotStates = new ConcurrentHashMap<>();
+    private static final Map<String, ParkingSlotState> parkingState = new ConcurrentHashMap<>();
+    private static CqlSession cassSession;
 
     public static void main(String[] args) throws IOException {
-        System.out.println("Starting Simple Parking Backend...");
+        cassSession = CqlSession.builder()
+                .withKeyspace(KEYSPACE)
+                .addContactPoint(new InetSocketAddress("127.0.0.1", 9042))
+                .withLocalDatacenter("datacenter1")
+                .build();
 
-        startKafkaConsumer(); // Start Kafka Consumer in a separate thread
+        startKafkaConsumer();
 
         HttpServer server = HttpServer.create(new InetSocketAddress(PORT), 0);
-        server.createContext(API_PATH, new ParkingStatusHandler());
+        server.createContext("/api/parking-status", new ParkingStatusHandler());
+        server.createContext("/api/subscribe", new SubscribeHandler());
         server.setExecutor(Executors.newFixedThreadPool(10));
         server.start();
-
-        System.out.println("HTTP Server started on port " + PORT + ". Access the API at http://localhost:" + PORT + API_PATH);
-        System.out.println("Ensure Kafka producer is sending data to topic '" + KAFKA_TOPIC + "' at " + KAFKA_BROKERS);
-        System.out.println("Now, open the 'index.html' file in your web browser.");
-
-        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-            System.out.println("Shutting down SimpleWebServer...");
-            if (server != null) {
-                server.stop(0);
-            }
-            System.out.println("SimpleWebServer stopped.");
-        }));
+        System.out.println("HTTP server running on http://localhost:" + PORT);
     }
 
     private static void startKafkaConsumer() {
-        Properties props = new Properties();
-        props.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_BROKERS);
-        props.put(ConsumerConfig.GROUP_ID_CONFIG, KAFKA_GROUP_ID);
-        props.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-        props.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
-        props.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
-        props.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "1000");
+        Properties p = new Properties();
+        p.put(ConsumerConfig.BOOTSTRAP_SERVERS_CONFIG, KAFKA_BROKERS);
+        p.put(ConsumerConfig.GROUP_ID_CONFIG, KAFKA_GROUP);
+        p.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        p.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
+        p.put(ConsumerConfig.AUTO_OFFSET_RESET_CONFIG, "latest");
 
         new Thread(() -> {
-            try (KafkaConsumer<String, String> consumer = new KafkaConsumer<>(props)) {
-                consumer.subscribe(Collections.singletonList(KAFKA_TOPIC));
-                System.out.println("Kafka Consumer started, subscribed to topic: " + KAFKA_TOPIC);
-
-                while (!Thread.currentThread().isInterrupted()) {
-                    ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
-                    for (ConsumerRecord<String, String> record : records) {
-                        try {
-                            JsonNode jsonNode = objectMapper.readTree(record.value());
-                            String parkingLotName = jsonNode.get("parking_lot_name").asText();
-                            int slotId = jsonNode.get("slot_id").asInt();
-                            String status = jsonNode.get("status").asText();
-                            String vehicleLicensePlate = jsonNode.has("vehicle_license_plate") && !jsonNode.get("vehicle_license_plate").isNull() ? jsonNode.get("vehicle_license_plate").asText() : null;
-                            int duration = jsonNode.has("duration") ? jsonNode.get("duration").asInt() : 0; // Get duration
-                            int temperature = jsonNode.has("temperature") ? jsonNode.get("temperature").asInt() : 0; // Get temperature
-
-                            String slotKey = parkingLotName + "-" + slotId;
-                            // Updated ParkingSlotState constructor
-                            ParkingSlotState state = new ParkingSlotState(parkingLotName, slotId, status, vehicleLicensePlate, duration, temperature);
-                            parkingSlotStates.put(slotKey, state);
-
-                            System.out.println("Received: " + parkingLotName + " S" + slotId + " -> " + status + (vehicleLicensePlate != null ? " (" + vehicleLicensePlate + ")" : ""));
-
-                        } catch (Exception e) {
-                            System.err.println("Error parsing Kafka message: " + record.value() + " - " + e.getMessage());
-                            e.printStackTrace();
-                        }
+            try (KafkaConsumer<String, String> c = new KafkaConsumer<>(p)) {
+                c.subscribe(Collections.singletonList(KAFKA_TOPIC));
+                while (true) {
+                    for (ConsumerRecord<String, String> r : c.poll(Duration.ofMillis(100))) {
+                        JsonNode j = MAPPER.readTree(r.value());
+                        String lot = j.get("parking_lot_name").asText();
+                        int id = j.get("slot_id").asInt();
+                        String st = j.get("status").asText();
+                        String plate = j.path("vehicle_license_plate").isNull() ? null : j.get("vehicle_license_plate").asText();
+                        int dur = j.path("duration").asInt(0);
+                        int temp = j.path("temperature").asInt(0);
+                        parkingState.put(lot + "-" + id, new ParkingSlotState(lot, id, st, plate, dur, temp));
                     }
                 }
             } catch (Exception e) {
-                System.err.println("Kafka Consumer error: " + e.getMessage());
                 e.printStackTrace();
-            } finally {
-                System.out.println("Kafka Consumer stopped.");
             }
         }, "KafkaConsumerThread").start();
     }
 
-
-   static class ParkingStatusHandler implements HttpHandler {
-        @Override
-        public void handle(HttpExchange exchange) throws IOException {
-            // Set CORS headers
-            exchange.getResponseHeaders().add("Access-Control-Allow-Origin", "*");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
-            exchange.getResponseHeaders().add("Access-Control-Allow-Headers", "Content-Type, Authorization");
-
-            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
-                exchange.sendResponseHeaders(204, -1); // No Content for OPTIONS
+    static class ParkingStatusHandler implements HttpHandler {
+    @Override
+    public void handle(HttpExchange ex) throws IOException {
+            cors(ex);
+            if ("OPTIONS".equalsIgnoreCase(ex.getRequestMethod())) {
+                ex.sendResponseHeaders(204, -1);
                 return;
             }
 
-            // --- Construct JSON response from current parkingSlotStates map ---
-            ArrayNode jsonArray = objectMapper.createArrayNode(); // <--- Creates a JSON array
-            for (ParkingSlotState slot : parkingSlotStates.values()) {
-                ObjectNode slotNode = objectMapper.createObjectNode(); // <--- Creates a JSON object for each slot
-                slotNode.put("parkingLotName", slot.getParkingLotName());
-                slotNode.put("slotId", slot.getSlotId());
-                slotNode.put("status", slot.getStatus());
-                slotNode.put("duration", slot.getDuration());
-                slotNode.put("temperature", slot.getTemperature());
+            ArrayNode arr = MAPPER.createArrayNode();
 
-                if (slot.getVehicleLicensePlate() != null) {
-                    slotNode.put("vehicle_license_plate", slot.getVehicleLicensePlate());
-                } else {
-                    slotNode.putNull("vehicle_license_plate");
+            try {
+                String query = "SELECT sensor_id, parking_lot_name, slot_id, status, last_updated FROM parking.parking_spot_current_status";
+                cassSession.execute(query).forEach(row -> {
+                    ObjectNode n = MAPPER.createObjectNode();
+                    n.put("sensorId", row.getString("sensor_id"));
+                    n.put("parkingLotName", row.getString("parking_lot_name"));
+                    n.put("slotId", row.getInt("slot_id"));
+                    n.put("status", row.getString("status"));
+                    n.put("lastUpdated", row.getInstant("last_updated").toString());
+                    arr.add(n);
+                });
+
+                byte[] json = arr.toString().getBytes();
+                ex.getResponseHeaders().set("Content-Type", "application/json");
+                ex.sendResponseHeaders(200, json.length);
+                try (OutputStream os = ex.getResponseBody()) {
+                    os.write(json);
                 }
-                jsonArray.add(slotNode); // Adds the slot object to the array
-            }
 
-            String jsonResponse = jsonArray.toString(); // <--- Converts the JSON array to a JSON string
-
-            exchange.getResponseHeaders().set("Content-Type", "application/json"); // <--- Sets the Content-Type header to application/json
-            exchange.sendResponseHeaders(200, jsonResponse.length());
-            try (OutputStream os = exchange.getResponseBody()) {
-                os.write(jsonResponse.getBytes());
+            } catch (Exception e) {
+                e.printStackTrace();
+                ex.sendResponseHeaders(500, 0);
+                ex.getResponseBody().write(("Error fetching data: " + e.getMessage()).getBytes());
             }
         }
     }
 
-    // --- Updated Inner Class to hold parking slot state with more fields ---
-    // Make this class public or add a default constructor for Jackson if you were serializing it directly.
-    // For manual JSON construction as above, getters are sufficient.
-    public static class ParkingSlotState { // Changed to public static
-        private String parkingLotName;
-        private int slotId;
-        private String status; // "free", "occupied", "malfunction"
-        private String vehicleLicensePlate;
-        private int duration;    // Added duration
-        private int temperature; // Added temperature
 
-        // Updated constructor
-        public ParkingSlotState(String parkingLotName, int slotId, String status, String vehicleLicensePlate, int duration, int temperature) {
-            this.parkingLotName = parkingLotName;
-            this.slotId = slotId;
-            this.status = status;
-            this.vehicleLicensePlate = vehicleLicensePlate;
-            this.duration = duration;
-            this.temperature = temperature;
+    static class SubscribeHandler implements HttpHandler {
+        public void handle(HttpExchange ex) throws IOException {
+            cors(ex);
+            if ("OPTIONS".equalsIgnoreCase(ex.getRequestMethod())) {
+                ex.sendResponseHeaders(204, -1);
+                return;
+            }
+            if (!"POST".equalsIgnoreCase(ex.getRequestMethod())) {
+                ex.sendResponseHeaders(405, -1);
+                return;
+            }
+
+            try {
+                JsonNode b = MAPPER.readTree(ex.getRequestBody());
+                String email = b.get("email").asText();
+                String name = b.path("name").asText("");
+                boolean alerts = b.path("subscribed_to_parking_alerts").asBoolean(false);
+                boolean news = b.path("subscribed_to_newsletter").asBoolean(false);
+
+                if (email.isBlank()) {
+                    ex.sendResponseHeaders(400, 0);
+                    ex.getResponseBody().write("Email required".getBytes());
+                    return;
+                }
+
+                String row = String.format("%s,%s,%b,%b,%s%n", email, name, alerts, news, Instant.now());
+                Files.write(Paths.get("subscribers.csv"), row.getBytes(), StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+
+                SimpleStatement stmt = SimpleStatement.builder(
+                        "INSERT INTO " + SUB_TABLE + " (email,name,subscribed_to_parking_alerts,subscribed_to_newsletter,created_at) VALUES (?,?,?,?,?)")
+                        .addPositionalValues(email, name, alerts, news, Instant.now())
+                        .build();
+                cassSession.execute(stmt);
+
+                byte[] ok = "{\"success\":true}".getBytes();
+                ex.getResponseHeaders().set("Content-Type", "application/json");
+                ex.sendResponseHeaders(200, ok.length);
+                ex.getResponseBody().write(ok);
+            } catch (Exception e) {
+                e.printStackTrace();
+                ex.sendResponseHeaders(500, 0);
+                ex.getResponseBody().write(e.getMessage().getBytes());
+            }
         }
+    }
 
-        // Getters (needed for JSON serialization or access)
-        public String getParkingLotName() { return parkingLotName; }
-        public int getSlotId() { return slotId; }
-        public String getStatus() { return status; }
-        public String getVehicleLicensePlate() { return vehicleLicensePlate; }
-        public int getDuration() { return duration; }       // New getter
-        public int getTemperature() { return temperature; } // New getter
+    private static void cors(HttpExchange ex) {
+        ex.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        ex.getResponseHeaders().set("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+        ex.getResponseHeaders().set("Access-Control-Allow-Headers", "Content-Type,Authorization");
+        ex.getResponseHeaders().set("Access-Control-Max-Age", "3600");
+    }
 
-        // Setters (if internal state needs to be modified after creation, not strictly needed if always creating new states)
-        // public void setStatus(String status) { this.status = status; }
-        // public void setVehicleLicensePlate(String vehicleLicensePlate) { this.vehicleLicensePlate = vehicleLicensePlate; }
-        // public void setDuration(int duration) { this.duration = duration; }
-        // public void setTemperature(int temperature) { this.temperature = temperature; }
+    static class ParkingSlotState {
+        final String lot;
+        final int id;
+        final String status;
+        final String plate;
+        final int duration;
+        final int temp;
+
+        ParkingSlotState(String l, int i, String s, String p, int d, int t) {
+            lot = l;
+            id = i;
+            status = s;
+            plate = p;
+            duration = d;
+            temp = t;
+        }
     }
 }
