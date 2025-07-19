@@ -1,5 +1,6 @@
 /sensor-simulator-java/target
 /smart-parking-backend/target
+/smart-parking-backend/subscribers.csv
 /spark-java-app/target
 /smart-parking-spark/project/target
 /smart-parking-spark/target

@@ -3,180 +3,37 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Parking Control Center</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <title>Pristina Smart Parking Map</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" 
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" 
+          crossorigin=""/>
     <link rel="stylesheet" href="style.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0/dist/chartjs-plugin-datalabels.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@2.0.1/dist/chartjs-plugin-zoom.min.js"></script>
 </head>
 <body>
-    <div class="dashboard-header">
-        <h1>Smart Parking Control Center</h1>
-        <div class="header-controls">
-            <button id="toggle-sidebar" class="control-btn" title="Toggle Sidebar" aria-label="Toggle Sidebar"><i class="fas fa-bars"></i></button>
-            <button id="toggle-theme" class="control-btn" title="Toggle Theme" aria-label="Toggle Theme"><i class="fas fa-moon"></i></button>
-            <select id="lot-filter" aria-label="Filter by Parking Lot">
-                <option value="all">All Lots</option>
-                <option value="Parking Lot A">Parking Lot A</option>
-                <option value="Parking Lot B">Parking Lot B</option>
-                <option value="Parking Lot C">Parking Lot C</option>
-            </select>
-            <select id="status-filter" aria-label="Filter by Status">
-                <option value="all">All Statuses</option>
-                <option value="free">Available</option>
-                <option value="occupied">Occupied</option>
-                <option value="malfunction">Malfunction</option>
-                <option value="sensor_failure">Sensor Failure</option>
-            </select>
-        </div>
-        <div id="status-message">Loading parking data...</div>
-    </div>
-
-    <div class="legend-container">
-        <div class="legend-item available">
-            <span class="legend-color-box"></span> Available
-        </div>
-        <div class="legend-item occupied">
-            <i class="fas fa-car"></i> Occupied
-        </div>
-        <div class="legend-item malfunction">
-            <i class="fas fa-tools"></i> Malfunction
-        </div>
-        <div class="legend-item sensor-failure">
-            <i class="fas fa-exclamation-triangle"></i> Sensor Failure
-        </div>
-    </div>
-
-    <div class="main-content-wrapper">
-        <div class="stats-panel" id="stats-panel">
-            <button id="collapse-sidebar" class="collapse-btn" aria-label="Collapse Sidebar"><i class="fas fa-chevron-left"></i></button>
-            <h2>Analytics Dashboard</h2>
-            <div class="stats-grid">
-                <div class="stat-card">
-                    <div class="stat-icon-wrapper total"><i class="fas fa-th-large"></i></div>
-                    <span class="stat-label">Total Spots</span>
-                    <span id="total-spots" class="stat-value">0</span>
-                </div>
-                <div class="stat-card available-card">
-                    <div class="stat-icon-wrapper available"><i class="fas fa-parking"></i></div>
-                    <span class="stat-label">Available Spots</span>
-                    <span id="available-spots" class="stat-value">0</span>
-                </div>
-                <div class="stat-card occupied-card">
-                    <div class="stat-icon-wrapper occupied"><i class="fas fa-car"></i></div>
-                    <span class="stat-label">Occupied Spots</span>
-                    <span id="occupied-spots" class="stat-value">0</span>
-                </div>
-                <div class="stat-card malfunction-card">
-                    <div class="stat-icon-wrapper malfunction"><i class="fas fa-tools"></i></div>
-                    <span class="stat-label">Malfunctioning Spots</span>
-                    <span id="malfunction-spots" class="stat-value">0</span>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon-wrapper rate"><i class="fas fa-chart-pie"></i></div>
-                    <span class="stat-label">Occupancy Rate</span>
-                    <div class="progress-container">
-                        <div id="occupancy-progress" class="progress-bar"></div>
-                    </div>
-                    <span id="occupancy-rate" class="stat-value">0%</span>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon-wrapper duration"><i class="fas fa-clock"></i></div>
-                    <span class="stat-label">Avg. Duration</span>
-                    <span id="avg-duration" class="stat-value">0 min</span>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon-wrapper temperature"><i class="fas fa-thermometer-half"></i></div>
-                    <span class="stat-label">Avg. Temperature</span>
-                    <span id="avg-temperature" class="stat-value">0 °C</span>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon-wrapper turnover"><i class="fas fa-sync-alt"></i></div>
-                    <span class="stat-label">Turnover Rate</span>
-                    <span id="turnover-rate" class="stat-value">0/hr</span>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon-wrapper prediction"><i class="fas fa-brain"></i></div>
-                    <span class="stat-label">Predicted Availability</span>
-                    <span id="predicted-availability" class="stat-value">0 spots</span>
-                </div>
-            </div>
-            <div class="charts-container">
-                <div class="chart-card">
-                    <h3>Occupancy Rate Over Time</h3>
-                    <div class="chart-controls">
-                        <button class="time-scale-btn active" data-scale="10m">10 Min</button>
-                        <button class="time-scale-btn" data-scale="1h">1 Hour</button>
-                        <button class="time-scale-btn" data-scale="1d">1 Day</button>
-                    </div>
-                    <canvas id="occupancy-trend-chart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Status Distribution</h3>
-                    <canvas id="status-pie-chart"></canvas>
-                </div>
-                <div class="chart-card">
-                    <h3>Temperature Trend</h3>
-                    <canvas id="temperature-trend-chart"></canvas>
-                </div>
-            </div>
-        </div>
-
-        <div class="dashboard-container">
-            <div class="lot-controls">
-                <button id="toggle-3d" class="control-btn" title="Toggle 3D View" aria-label="Toggle 3D View">3D View</button>
-                <button id="toggle-heatmap" class="control-btn" title="Toggle Heatmap" aria-label="Toggle Heatmap">Heatmap</button>
-            </div>
-            <div class="parking-lots-wrapper">
-                <div id="parking-lot-A" class="parking-lot-card" data-lot="A">
-                    <h2>Parking Lot A</h2>
-                    <div class="parking-map-grid" data-lot="A"></div>
-                </div>
-                <div id="parking-lot-B" class="parking-lot-card" data-lot="B">
-                    <h2>Parking Lot B</h2>
-                    <div class="parking-map-grid" data-lot="B"></div>
-                </div>
-                <div id="parking-lot-C" class="parking-lot-card" data-lot="C">
-                    <h2>Parking Lot C</h2>
-                    <div class="parking-map-grid" data-lot="C"></div>
-                </div>
-            </div>
-        </div>
-    </div>
-
+    <header>
+        <h1>Pristina Smart Parking</h1>
+        <nav>
+            <a href="#">Home</a>
+        </nav>
+    </header>
+    <div id="parking-map">Map is loading...</div>
     <div id="alerts-container"></div>
-    <div id="slot-details" class="slot-details hidden"></div>
-    <!-- Add this just before the <script src="script.js"></script> line -->
-    <footer class="dashboard-footer">
+    <div id="error-message" class="error-message" style="display: none;"></div>
+    <footer>
         <div class="footer-content">
-            <span>&copy; 2025 Smart Parking Solutions. All rights reserved.</span>
-            <span>Version 1.0.0</span>
-            <a href="mailto:support@smartparking.com" class="footer-link">Contact Support</a>
-        </div>
-        <section id="subscribe-section" style="margin: 40px auto; max-width: 500px; padding: 20px; background: #f6f9fc; border-radius: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);">
-            <h2 style="text-align: center; margin-bottom: 15px;">📧 Subscribe to Smart Parking Updates</h2>
+            <p>© 2025 Pristina Smart Parking. Powered by OpenStreetMap and Leaflet.</p>
             <form id="subscribe-form">
-                <input type="text" id="sub-name" placeholder="Your Name" required style="width: 100%; margin-bottom: 10px; padding: 10px; border: 1px solid #ccd6e0; border-radius: 6px;" />
-                <input type="email" id="sub-email" placeholder="Your Email" required style="width: 100%; margin-bottom: 10px; padding: 10px; border: 1px solid #ccd6e0; border-radius: 6px;" />
-                
-                <label style="display: block; margin-bottom: 10px;">
-                <input type="checkbox" id="alerts-checkbox" /> Subscribe to parking alerts
-                </label>
-                <label style="display: block; margin-bottom: 20px;">
-                <input type="checkbox" id="newsletter-checkbox" checked /> Subscribe to newsletter
-                </label>
-                
-                <button type="submit" style="width: 100%; padding: 12px; background: #1a73e8; color: white; border: none; border-radius: 6px; cursor: pointer; font-weight: 600;">
-                Subscribe
-                </button>
-                <div id="subscribe-message" style="margin-top: 10px; font-size: 0.9em;"></div>
+                <h3>Subscribe for Updates</h3>
+                <!-- Sends POST to http://localhost:8085/api/subscribe with { email: string } -->
+                <input type="email" id="subscribe-email" placeholder="Enter your email" required>
+                <button type="submit">Subscribe</button>
             </form>
-        </section>
-
+        </div>
     </footer>
 
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" 
+            integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" 
+            crossorigin=""></script>
     <script src="script.js"></script>
 </body>
 </html>

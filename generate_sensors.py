@@ -1,6 +1,6 @@
 from datetime import datetime, timezone
 
-lots = ['A', 'B', 'C']
+lots = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H']
 slots_per_lot = 50
 base_lat = 42.650000
 base_long = 21.170000
