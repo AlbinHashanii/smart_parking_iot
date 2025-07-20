@@ -27,10 +27,10 @@ const BACKEND_TO_FRONTEND_MAP = {
     "Lot-B": "Arberia",
     "Lot-C": "Dardania",
     "Lot-D": "Ulpiana",
-    "Lot-E": "Sunny Hill",
+    "Lot-E": "Bregu i Diellit",
     "Lot-F": "Kalabria",
     "Lot-G": "Lakrishte",
-    "Lot-H": "Taukbahçe"
+    "Lot-H": "Kodra e Trimave"
 };
 
 function showErrorMessage(message) {
