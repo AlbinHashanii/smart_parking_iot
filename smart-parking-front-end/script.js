@@ -12,14 +12,14 @@ let parkingLotMarkers = {};
 let aggregatedLotData = {};
 
 const PARKING_LOT_COORDINATES = {
-    "City Center": { lat: 42.6727, lng: 21.1669, totalSlots: TOTAL_SLOTS_PER_LOT }, // Mother Teresa Square
-    "Arberia": { lat: 42.6635, lng: 21.1565, totalSlots: TOTAL_SLOTS_PER_LOT }, // Near Bill Clinton Blvd
-    "Dardania": { lat: 42.6572, lng: 21.1512, totalSlots: TOTAL_SLOTS_PER_LOT }, // South, residential
-    "Ulpiana": { lat: 42.6505, lng: 21.1650, totalSlots: TOTAL_SLOTS_PER_LOT }, // Modern residential
-    "Sunny Hill": { lat: 42.6402, lng: 21.1567, totalSlots: TOTAL_SLOTS_PER_LOT }, // Southwest, residential
-    "Kalabria": { lat: 42.6550, lng: 21.1700, totalSlots: TOTAL_SLOTS_PER_LOT }, // Urban, not Veternik
-    "Lakrishte": { lat: 42.6600, lng: 21.1580, totalSlots: TOTAL_SLOTS_PER_LOT }, // Near Arberia
-    "Taukbahçe": { lat: 42.6650, lng: 21.1600, totalSlots: TOTAL_SLOTS_PER_LOT } // Central, residential
+    "City Center": { lat: 42.6595317, lng: 21.1602549, totalSlots: TOTAL_SLOTS_PER_LOT }, // Mother Teresa Square
+    "Arberia": { lat: 42.662349, lng: 21.148689, totalSlots: TOTAL_SLOTS_PER_LOT }, // Near Bill Clinton Blvd
+    "Dardania": { lat: 42.651348 , lng: 21.154443, totalSlots: TOTAL_SLOTS_PER_LOT }, // South, residential
+    "Ulpiana": { lat: 42.651188, lng: 21.161378, totalSlots: TOTAL_SLOTS_PER_LOT }, // Modern residential
+    "Bregu i Diellit": { lat: 42.653587, lng: 21.174288, totalSlots: TOTAL_SLOTS_PER_LOT }, // Southwest, residential
+    "Kalabria": { lat: 42.642933, lng: 21.143615, totalSlots: TOTAL_SLOTS_PER_LOT }, // Urban, not Veternik
+    "Lakrishte": { lat: 42.656792, lng: 21.153727, totalSlots: TOTAL_SLOTS_PER_LOT }, // Near Arberia
+    "Kodra e Trimave": { lat: 42.678117, lng: 21.163883, totalSlots: TOTAL_SLOTS_PER_LOT } // Central, residential
 };
 
 const BACKEND_TO_FRONTEND_MAP = {
@@ -106,7 +106,7 @@ function setupMarkerInteraction(marker, lotName, coords) {
 
     console.log(`Marker ${lotName}: free=${available}, occupied=${occupied}, malfunction=${malfunctions}, total=${total}`);
 
-    marker.bindTooltip(`<b>${lotName}</b><br>${available}/${total} slots available`, {
+    marker.bindTooltip(`<b>${lotName}</b><br>${available}/${total} vende te lira`, {
         offset: [0, -20],
         direction: 'top',
         permanent: false
