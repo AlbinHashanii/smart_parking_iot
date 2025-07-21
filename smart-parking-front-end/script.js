@@ -13,7 +13,7 @@ let aggregatedLotData = {};
 
 const PARKING_LOT_COORDINATES = {
     "City Center": { lat: 42.6595317, lng: 21.1602549, totalSlots: TOTAL_SLOTS_PER_LOT }, // Mother Teresa Square
-    "Arberia": { lat: 42.662349, lng: 21.148689, totalSlots: TOTAL_SLOTS_PER_LOT }, // Near Bill Clinton Blvd
+    "Arberia": { lat: 42.662349, lng: 21.148689, totalSlots: TOTAL_SLOTS_PER_LOT }, 
     "Dardania": { lat: 42.651348 , lng: 21.154443, totalSlots: TOTAL_SLOTS_PER_LOT }, // South, residential
     "Ulpiana": { lat: 42.651188, lng: 21.161378, totalSlots: TOTAL_SLOTS_PER_LOT }, // Modern residential
     "Bregu i Diellit": { lat: 42.653587, lng: 21.174288, totalSlots: TOTAL_SLOTS_PER_LOT }, // Southwest, residential
