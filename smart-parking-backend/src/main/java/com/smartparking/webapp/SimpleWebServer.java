@@ -39,7 +39,7 @@ public class SimpleWebServer {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
     private static final String SENDER_EMAIL = "albinhashani06@gmail.com";
-    private static final String SENDER_EMAIL_PASSWORD = "htipmcweqnxukxme";
+    private static final String SENDER_EMAIL_PASSWORD = "sekret";
     private static final String EMPLOYEE_EMAIL = "albinhashani02@gmail.com";
 
     private static ExecutorService emailSenderExecutor;
